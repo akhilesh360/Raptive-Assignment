@@ -14,6 +14,12 @@ def get_distribution(dist_name, **kwargs):
         return stats.expon(scale=1/kwargs["lam_exp"])
     return None
 
+DIST_DESCRIPTIONS = {
+    "Normal": "The Normal distribution, often called the 'bell curve,' is a fundamental concept in statistics. It is used to model many natural phenomena, such as heights, blood pressure, and measurement errors. Its symmetrical shape is defined by its mean (average) and standard deviation (spread).",
+    "Poisson": "The Poisson distribution is used to model the number of events occurring within a fixed interval of time or space. It is particularly useful for forecasting rare events, such as the number of customer arrivals at a service center per hour or the number of defects in a manufactured product.",
+    "Exponential": "The Exponential distribution describes the time between events in a Poisson process, where events occur continuously and independently at a constant average rate. It is often used in reliability analysis to model the time until failure of a component or in queuing theory to model customer service times."
+}
+
 def main():
     """Main function to run the Streamlit app."""
     st.set_page_config(
@@ -69,6 +75,8 @@ def main():
 
     # --- Main Panel ---
     st.header(f"{dist_name} Distribution")
+
+    st.info(DIST_DESCRIPTIONS[dist_name])
 
     # Generate sample data
     sample = dist.rvs(size=sample_size)
@@ -135,32 +143,32 @@ def main():
 
     # --- Interactive Demo ---
     if dist_name == "Normal":
-        st.header("Central Limit Theorem (CLT) Demo")
-        st.write(
-            "The Central Limit Theorem states that the distribution of sample means "
-            "approximates a normal distribution, regardless of the population's distribution, "
-            "as the sample size gets larger."
-        )
+        with st.expander("Explore the Central Limit Theorem (CLT)"):
+            st.write(
+                "The Central Limit Theorem states that the distribution of sample means "
+                "approximates a normal distribution, regardless of the population's distribution, "
+                "as the sample size gets larger."
+            )
 
-        clt_sample_size = st.slider("CLT Sample Size", 10, 500, 30, 5)
-        num_samples = st.slider("Number of Samples", 100, 5000, 1000, 100)
+            clt_sample_size = st.slider("CLT Sample Size", 10, 500, 30, 5, key="clt_sample_size")
+            num_samples = st.slider("Number of Samples", 100, 5000, 1000, 100, key="num_samples")
 
-        sample_means = [np.mean(dist.rvs(size=clt_sample_size)) for _ in range(num_samples)]
+            sample_means = [np.mean(dist.rvs(size=clt_sample_size)) for _ in range(num_samples)]
 
-        fig, ax = plt.subplots()
-        ax.hist(sample_means, bins=50, density=True, alpha=0.7, label='Histogram of Sample Means')
+            fig, ax = plt.subplots()
+            ax.hist(sample_means, bins=50, density=True, alpha=0.7, label='Histogram of Sample Means')
 
-        # Overlay normal distribution
-        clt_mean = np.mean(sample_means)
-        clt_std = np.std(sample_means)
-        x = np.linspace(clt_mean - 4*clt_std, clt_mean + 4*clt_std, 100)
-        ax.plot(x, stats.norm.pdf(x, clt_mean, clt_std), 'r-', lw=2, label='Normal Approximation')
+            # Overlay normal distribution
+            clt_mean = np.mean(sample_means)
+            clt_std = np.std(sample_means)
+            x = np.linspace(clt_mean - 4*clt_std, clt_mean + 4*clt_std, 100)
+            ax.plot(x, stats.norm.pdf(x, clt_mean, clt_std), 'r-', lw=2, label='Normal Approximation')
 
-        ax.set_title("Distribution of Sample Means")
-        ax.set_xlabel("Sample Mean")
-        ax.set_ylabel("Density")
-        ax.legend()
-        st.pyplot(fig)
+            ax.set_title("Distribution of Sample Means")
+            ax.set_xlabel("Sample Mean")
+            ax.set_ylabel("Density")
+            ax.legend()
+            st.pyplot(fig)
 
 if __name__ == "__main__":
     main()
