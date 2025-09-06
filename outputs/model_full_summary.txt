@@ -1,0 +1,30 @@
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                revenue   R-squared:                       0.852
+Model:                            OLS   Adj. R-squared:                  0.852
+Method:                 Least Squares   F-statistic:                     4028.
+Date:                Sat, 06 Sep 2025   Prob (F-statistic):               0.00
+Time:                        11:33:52   Log-Likelihood:                 21974.
+No. Observations:                4000   AIC:                        -4.393e+04
+Df Residuals:                    3993   BIC:                        -4.389e+04
+Df Model:                           6                                         
+Covariance Type:                  HC3                                         
+=========================================================================================
+                            coef    std err          z      P>|z|      [0.025      0.975]
+-----------------------------------------------------------------------------------------
+Intercept                 0.0126   4.52e-05    278.713      0.000       0.013       0.013
+C(browser)[T.safari]     -0.0030   3.65e-05    -80.930      0.000      -0.003      -0.003
+C(platform)[T.mobile]    -0.0050   4.29e-05   -115.695      0.000      -0.005      -0.005
+C(site)[T.2]          -5.027e-05   4.59e-05     -1.094      0.274      -0.000    3.98e-05
+C(site)[T.3]          -7.679e-05   4.58e-05     -1.675      0.094      -0.000     1.3e-05
+C(site)[T.4]           7.568e-05   6.67e-05      1.135      0.256    -5.5e-05       0.000
+time_on_page           9.876e-05   3.24e-06     30.444      0.000    9.24e-05       0.000
+==============================================================================
+Omnibus:                        2.369   Durbin-Watson:                   2.010
+Prob(Omnibus):                  0.306   Jarque-Bera (JB):                2.366
+Skew:                          -0.039   Prob(JB):                        0.306
+Kurtosis:                       2.910   Cond. No.                         71.8
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity robust (HC3)

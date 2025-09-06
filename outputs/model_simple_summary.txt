@@ -1,0 +1,25 @@
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                revenue   R-squared:                       0.318
+Model:                            OLS   Adj. R-squared:                  0.317
+Method:                 Least Squares   F-statistic:                     1861.
+Date:                Sat, 06 Sep 2025   Prob (F-statistic):               0.00
+Time:                        11:33:52   Log-Likelihood:                 18911.
+No. Observations:                4000   AIC:                        -3.782e+04
+Df Residuals:                    3998   BIC:                        -3.781e+04
+Df Model:                           1                                         
+Covariance Type:            nonrobust                                         
+================================================================================
+                   coef    std err          t      P>|t|      [0.025      0.975]
+--------------------------------------------------------------------------------
+Intercept        0.0120   6.24e-05    192.006      0.000       0.012       0.012
+time_on_page    -0.0002   4.64e-06    -43.143      0.000      -0.000      -0.000
+==============================================================================
+Omnibus:                       31.663   Durbin-Watson:                   2.003
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):               21.410
+Skew:                          -0.006   Prob(JB):                     2.24e-05
+Kurtosis:                       2.642   Cond. No.                         24.9
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.

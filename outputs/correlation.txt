@@ -1,0 +1,2 @@
+Pearson r = -0.5636, p = 0
+Spearman r = -0.6081, p = 0

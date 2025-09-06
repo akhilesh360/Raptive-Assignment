@@ -1,0 +1,61 @@
+
+<html>
+<head>
+    <title>Technical Appendix: Time on Page vs Revenue</title>
+</head>
+<body>
+    <h1>Technical Appendix: Time on Page vs Revenue</h1>
+
+    <h2>Regression Results</h2>
+    <pre>                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                revenue   R-squared:                       0.851
+Model:                            OLS   Adj. R-squared:                  0.851
+Method:                 Least Squares   F-statistic:                     3797.
+Date:                Sat, 06 Sep 2025   Prob (F-statistic):               0.00
+Time:                        16:23:04   Log-Likelihood:                 21937.
+No. Observations:                4000   AIC:                        -4.386e+04
+Df Residuals:                    3993   BIC:                        -4.382e+04
+Df Model:                           6                                         
+Covariance Type:            nonrobust                                         
+=========================================================================================
+                            coef    std err          t      P>|t|      [0.025      0.975]
+-----------------------------------------------------------------------------------------
+Intercept                 0.0126   4.51e-05    280.015      0.000       0.013       0.013
+C(browser)[T.safari]     -0.0030    3.7e-05    -79.830      0.000      -0.003      -0.003
+C(platform)[T.mobile]    -0.0050   4.41e-05   -112.583      0.000      -0.005      -0.005
+C(site)[T.2]          -4.847e-05   4.61e-05     -1.051      0.293      -0.000    4.19e-05
+C(site)[T.3]          -7.561e-05   4.61e-05     -1.640      0.101      -0.000    1.48e-05
+C(site)[T.4]           8.415e-05   6.61e-05      1.274      0.203   -4.54e-05       0.000
+top                     9.71e-05   3.23e-06     30.029      0.000    9.08e-05       0.000
+==============================================================================
+Omnibus:                        0.123   Durbin-Watson:                   2.010
+Prob(Omnibus):                  0.940   Jarque-Bera (JB):                0.114
+Skew:                           0.013   Prob(JB):                        0.945
+Kurtosis:                       3.004   Cond. No.                         72.3
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.</pre>
+
+    <h2>Code Snippets</h2>
+    <pre>
+# Correlation and Scatter
+corr, pval = pearsonr(df['top'], df['revenue'])
+
+# Regression with Controls
+model = smf.ols("revenue ~ top + C(browser) + C(platform) + C(site)", data=df).fit()
+print(model.summary())
+
+# Visualizations
+sns.scatterplot(x='top', y='revenue', data=df, alpha=0.5)
+sns.regplot(x='top', y='revenue', data=df, scatter=False, color='red')
+    </pre>
+
+    <h2>Notes</h2>
+    <p>
+    All statistical tests were conducted at the 5% significance level.
+    Regression was fit using OLS with categorical variables encoded via dummy coding.
+    </p>
+</body>
+</html>
