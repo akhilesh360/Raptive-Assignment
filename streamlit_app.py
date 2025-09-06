@@ -1,174 +1,207 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from scipy import stats
+import json
+import textwrap
+from urllib.parse import urlencode
 
-def get_distribution(dist_name, **kwargs):
-    """Returns a scipy.stats distribution object based on the name and parameters."""
-    if dist_name == "Normal":
-        return stats.norm(loc=kwargs["mean"], scale=kwargs["std_dev"])
-    elif dist_name == "Poisson":
-        return stats.poisson(mu=kwargs["lam"])
-    elif dist_name == "Exponential":
-        return stats.expon(scale=1/kwargs["lam_exp"])
-    return None
+# --- Page Configuration ---
+st.set_page_config(page_title="CLT Explorer", page_icon="📊", layout="wide")
 
-DIST_DESCRIPTIONS = {
-    "Normal": "The Normal distribution, often called the 'bell curve,' is a fundamental concept in statistics. It is used to model many natural phenomena, such as heights, blood pressure, and measurement errors. Its symmetrical shape is defined by its mean (average) and standard deviation (spread).",
-    "Poisson": "The Poisson distribution is used to model the number of events occurring within a fixed interval of time or space. It is particularly useful for forecasting rare events, such as the number of customer arrivals at a service center per hour or the number of defects in a manufactured product.",
-    "Exponential": "The Exponential distribution describes the time between events in a Poisson process, where events occur continuously and independently at a constant average rate. It is often used in reliability analysis to model the time until failure of a component or in queuing theory to model customer service times."
-}
-
-def main():
-    """Main function to run the Streamlit app."""
-    st.set_page_config(
-        page_title="Statistical Distribution Explorer",
-        page_icon="📊",
-        layout="wide",
-        initial_sidebar_state="expanded",
-    )
-
-    st.title("📊 Statistical Distribution Explorer")
-    st.write(
-        "An interactive web app to explore the properties of common statistical distributions."
-    )
-
-    # --- Sidebar Controls ---
-    st.sidebar.header("Distribution Parameters")
-    dist_name = st.sidebar.selectbox(
-        "Choose a distribution",
-        ("Normal", "Poisson", "Exponential"),
-        help="Select the statistical distribution you want to explore.",
-    )
-
-    seed = st.sidebar.number_input(
-        "Random Seed",
-        value=42,
-        min_value=0,
-        max_value=1000,
-        step=1,
-        help="Set a seed for the random number generator to ensure reproducibility.",
-    )
+# --- Core Simulation Logic ---
+@st.cache_data
+def run_simulation(dist_name, dist_params, n, M, seed):
     np.random.seed(seed)
+    if dist_name == "Normal": base_dist = stats.norm(loc=dist_params.get('μ', 0), scale=dist_params.get('σ', 1))
+    elif dist_name == "Exponential": base_dist = stats.expon(scale=1/dist_params.get('λ', 1))
+    elif dist_name == "Poisson": base_dist = stats.poisson(mu=dist_params.get('λ', 3))
+    elif dist_name == "Bernoulli": base_dist = stats.bernoulli(p=dist_params.get('p', 0.5))
+    elif dist_name == "Pareto": base_dist = stats.pareto(b=dist_params.get('α', 2.5))
+    else: raise ValueError(f"Unknown distribution: {dist_name}")
 
-    sample_size = st.sidebar.slider(
-        "Sample Size", 50, 5000, 1000, 10, help="Number of random samples to generate."
-    )
+    sample_means = np.array([base_dist.rvs(size=n).mean() for _ in range(M)])
+    base_sample = base_dist.rvs(size=1000)
+    theoretical_mean = base_dist.mean()
+    theoretical_var = base_dist.var() / n if n > 0 else 0
+    stats_dict = {
+        "theoretical_mean": theoretical_mean, "theoretical_var": theoretical_var,
+        "theoretical_std": np.sqrt(theoretical_var), "empirical_mean": sample_means.mean(),
+        "empirical_var": sample_means.var(ddof=1), "empirical_skew": stats.skew(sample_means),
+        "empirical_kurt": stats.kurtosis(sample_means)
+    }
+    return sample_means, base_dist, base_sample, stats_dict
 
+# --- Plotting Functions ---
+def create_hero_histogram(sample_means, theoretical_mean, theoretical_std, title):
+    fig = go.Figure()
+    fig.add_trace(go.Histogram(x=sample_means, name='Sample Means', histnorm='probability density', marker_color='#1f77b4', opacity=0.7))
+    x_norm = np.linspace(min(sample_means), max(sample_means), 500)
+    y_norm = stats.norm.pdf(x_norm, loc=theoretical_mean, scale=theoretical_std)
+    fig.add_trace(go.Scatter(x=x_norm, y=y_norm, mode='lines', name='Theoretical Normal', line=dict(color='red', width=2)))
+    fig.update_layout(title_text=title, xaxis_title="Sample Mean", yaxis_title="Density", template="plotly_white", showlegend=False)
+    return fig
+
+def create_qq_plot(sample_means):
+    (osm, osr), (slope, intercept, r) = stats.probplot(sample_means, dist="norm", fit=True)
+    fig = go.Figure(data=[go.Scatter(x=osm, y=osr, mode='markers', name='Data'), go.Scatter(x=osm, y=slope*osm + intercept, mode='lines', name='Fit', line=dict(color='red'))])
+    fig.update_layout(title=f'Q-Q Plot (R²={r**2:.4f})', xaxis_title='Theoretical Quantiles', yaxis_title='Sample Quantiles', template="plotly_white")
+    return fig
+
+def create_base_dist_plot(base_dist, base_sample, dist_name):
+    fig = go.Figure()
+    fig.add_trace(go.Histogram(x=base_sample, name='Base Sample', histnorm='probability density', marker_color='#2ca02c'))
+    if dist_name in ["Normal", "Exponential", "Pareto"]:
+        x_vals = np.linspace(base_sample.min(), base_sample.max(), 200)
+        y_vals = base_dist.pdf(x_vals)
+        fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', name='Theoretical PDF', line=dict(color='purple')))
+    else:
+        x_vals, counts = np.unique(base_sample, return_counts=True)
+        y_vals_pmf = base_dist.pmf(x_vals)
+        fig.add_trace(go.Bar(x=x_vals, y=counts/len(base_sample), name='Empirical PMF'))
+        fig.add_trace(go.Scatter(x=x_vals, y=y_vals_pmf, mode='markers', name='Theoretical PMF', marker=dict(color='purple', size=8)))
+    fig.update_layout(title=f'Histogram of Base Distribution ({dist_name})', xaxis_title='Value', yaxis_title='Density / Probability', template="plotly_white")
+    return fig
+
+def create_convergence_plot(base_dist, n, M):
+    means = []
+    m_steps = np.linspace(100, M, 20, dtype=int)
+    for m_step in m_steps:
+        sample_means = np.array([base_dist.rvs(size=n).mean() for _ in range(m_step)])
+        means.append(sample_means.mean())
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=m_steps, y=means, mode='lines+markers', name='Empirical Mean'))
+    fig.add_hline(y=base_dist.mean(), line_dash="dash", line_color="red", name="Theoretical Mean")
+    fig.update_layout(title='Convergence of Sample Mean as M Grows', xaxis_title='Number of Repetitions (M)', yaxis_title='Mean of Sample Means', template="plotly_white")
+    return fig
+
+# --- UI Component Functions ---
+def get_scenario_params(suffix, defaults):
+    st.markdown(f"#### Scenario {suffix}")
+    dist_options = ("Normal", "Exponential", "Poisson", "Bernoulli", "Pareto")
+    dist_key = f'dist_{suffix}'
+    dist_name = st.selectbox("Distribution", dist_options, key=dist_key, index=dist_options.index(defaults.get(dist_key, "Normal")))
     params = {}
     if dist_name == "Normal":
-        st.sidebar.subheader("Normal Distribution")
-        params["mean"] = st.sidebar.slider("Mean (μ)", -10.0, 10.0, 0.0, 0.1)
-        params["std_dev"] = st.sidebar.slider("Standard Deviation (σ)", 0.1, 10.0, 1.0, 0.1)
-    elif dist_name == "Poisson":
-        st.sidebar.subheader("Poisson Distribution")
-        params["lam"] = st.sidebar.slider("Lambda (λ)", 1.0, 20.0, 5.0, 0.5)
+        params['μ'] = st.slider("Mean (μ)", -10.0, 10.0, float(defaults.get(f'μ_{suffix}', 0.0)), 0.1, key=f'μ_{suffix}')
+        params['σ'] = st.slider("Std Dev (σ)", 0.1, 10.0, float(defaults.get(f'σ_{suffix}', 1.0)), 0.1, key=f'σ_{suffix}')
     elif dist_name == "Exponential":
-        st.sidebar.subheader("Exponential Distribution")
-        params["lam_exp"] = st.sidebar.slider("Lambda (λ)", 0.1, 10.0, 1.0, 0.1)
+        params['λ'] = st.slider("Rate (λ)", 0.1, 10.0, float(defaults.get(f'λ_{suffix}', 1.0)), 0.1, key=f'λ_{suffix}')
+    elif dist_name == "Poisson":
+         params['λ'] = st.slider("Rate (λ)", 1.0, 20.0, float(defaults.get(f'λ_{suffix}', 3.0)), 0.5, key=f'λ_{suffix}')
+    elif dist_name == "Bernoulli":
+        params['p'] = st.slider("Probability (p)", 0.0, 1.0, float(defaults.get(f'p_{suffix}', 0.5)), 0.01, key=f'p_{suffix}')
+    elif dist_name == "Pareto":
+        params['α'] = st.slider("Shape (α)", 0.1, 5.0, float(defaults.get(f'α_{suffix}', 2.5)), 0.1, key=f'α_{suffix}')
+        if params['α'] <= 2: st.warning("For Pareto with α ≤ 2, variance is infinite and the CLT does not apply in its standard form.")
 
-    dist = get_distribution(dist_name, **params)
-    if not dist:
-        st.error("Invalid distribution selected.")
-        return
+    n = st.slider("Sample Size (n)", 1, 500, int(defaults.get(f'n_{suffix}', 30)), 1, key=f'n_{suffix}')
+    M = st.slider("Repetitions (M)", 100, 10000, int(defaults.get(f'M_{suffix}', 1000)), 100, key=f'M_{suffix}')
+    return dist_name, params, n, M
 
-    # --- Main Panel ---
-    st.header(f"{dist_name} Distribution")
+def render_executive_view(sample_means, stats_dict, n, title="Executive Summary"):
+    st.header(title)
+    fig = create_hero_histogram(sample_means, stats_dict['theoretical_mean'], stats_dict['theoretical_std'], "Distribution of Sample Means")
+    st.plotly_chart(fig, use_container_width=True)
+    return fig
 
-    st.info(DIST_DESCRIPTIONS[dist_name])
+def render_data_scientist_view(sample_means, base_dist, base_sample, stats_dict, dist_name, n, M):
+    st.header("Detailed Analysis")
+    tab1, tab2, tab3 = st.tabs(["Convergence", "Diagnostics", "Base Distribution"])
+    with tab1:
+        st.subheader("Convergence of Sample Means to Normality")
+        st.plotly_chart(create_convergence_plot(base_dist, n, M), use_container_width=True)
+    with tab2:
+        st.subheader("Goodness-of-Fit and Diagnostics")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("###### Normality Tests")
+            ks_stat, ks_p = stats.kstest(sample_means, 'norm', args=(stats_dict['empirical_mean'], np.sqrt(stats_dict['empirical_var'])))
+            sw_stat, sw_p = stats.shapiro(sample_means)
+            st.metric("Kolmogorov-Smirnov p-value", f"{ks_p:.4f}")
+            st.metric("Shapiro-Wilk p-value", f"{sw_p:.4f}")
+        with c2: st.plotly_chart(create_qq_plot(sample_means), use_container_width=True)
+    with tab3:
+        st.subheader("Underlying Base Distribution")
+        st.plotly_chart(create_base_dist_plot(base_dist, base_sample, dist_name), use_container_width=True)
+        m, v, s, k = base_dist.stats(moments='mvsk')
+        st.table(pd.DataFrame({"Moment": ["Mean", "Variance", "Skewness", "Kurtosis"], "Value": [f"{m:.3f}", f"{v:.3f}", f"{s:.3f}", f"{k:.3f}"]}))
 
-    # Generate sample data
-    sample = dist.rvs(size=sample_size)
+def render_reproducibility_section(params, hero_fig):
+    with st.expander("Export & Reproduce"):
+        st.code(f"http://localhost:8501?{urlencode(params)}", language=None)
+        code_snippet = f"run_simulation(dist_name='{params.get('dist_A')}', dist_params={params.get('params_A')}, n={params.get('n_A')}, M={params.get('M_A')}, seed={params.get('seed')})"
+        st.code(textwrap.dedent(code_snippet), language="python")
+        c1, c2 = st.columns(2)
+        settings_json = json.dumps(params, indent=2, default=str)
+        c1.download_button("Download Settings (JSON)", settings_json, "clt_settings.json")
+        img_bytes = hero_fig.to_image(format="png", width=800, height=500, scale=2)
+        c2.download_button("Download Chart (PNG)", img_bytes, "clt_histogram.png")
 
-    # --- Statistics Panel ---
-    st.sidebar.subheader("Descriptive Statistics")
-    mean, var, skew, kurt = dist.stats(moments='mvsk')
-    st.sidebar.metric("Mean", f"{mean:.4f}")
-    st.sidebar.metric("Variance", f"{var:.4f}")
-    st.sidebar.metric("Skewness", f"{skew:.4f}")
-    st.sidebar.metric("Kurtosis", f"{kurt:.4f}")
+def render_glossary():
+    with st.sidebar.expander("Glossary", expanded=False):
+        st.markdown("""
+        - **CLT (Central Limit Theorem):** States that the distribution of sample means approximates a normal distribution as the sample size grows.
+        - **LLN (Law of Large Numbers):** States that the average of results from many trials should be close to the expected value.
+        - **Skewness:** Measure of a distribution's asymmetry.
+        - **Kurtosis:** Measure of a distribution's "tailedness".
+        - **Heavy-Tailed Distribution:** A distribution with tails heavier than an exponential one, meaning more outliers.
+        """)
 
-    # --- Data Download ---
-    df = pd.DataFrame(sample, columns=["value"])
-    csv = df.to_csv(index=False).encode('utf-8')
-    st.sidebar.download_button(
-        label="Download Sample Data (CSV)",
-        data=csv,
-        file_name=f"{dist_name.lower()}_sample.csv",
-        mime='text/csv',
-    )
+# --- Main Application ---
+def main():
+    st.title("📊 Central Limit Theorem Dashboard")
+    with st.sidebar:
+        st.header("Controls")
+        defaults = {k: v[0] for k, v in st.query_params.items()}
+        ab_mode = st.toggle("A/B Comparison Mode", key='ab_mode', value=bool(defaults.get('ab_mode', False)))
+        st.subheader("Presets")
+        if st.button("Small n (n=5)", use_container_width=True, disabled=ab_mode): st.query_params.n_A = 5; st.rerun()
+        if st.button("Large n (n=200)", use_container_width=True, disabled=ab_mode): st.query_params.n_A = 200; st.rerun()
+        if st.button("Heavy Tail (Pareto, α=1.5)", use_container_width=True, disabled=ab_mode):
+            st.query_params.dist_A = "Pareto"; st.query_params.α_A = 1.5; st.rerun()
 
-    # --- Visualizations ---
-    col1, col2 = st.columns(2)
+        params = {}
+        if ab_mode:
+            c1, c2 = st.columns(2)
+            with c1: params['A'] = get_scenario_params("A", defaults)
+            with c2: params['B'] = get_scenario_params("B", defaults)
+        else:
+            params['A'] = get_scenario_params("A", defaults)
 
-    # PDF/PMF Plot
-    with col1:
-        fig, ax = plt.subplots()
-        if dist_name in ["Normal", "Exponential"]:
-            x = np.linspace(dist.ppf(0.001), dist.ppf(0.999), 200)
-            ax.plot(x, dist.pdf(x), 'r-', lw=2, label='PDF')
-            ax.hist(sample, bins=50, density=True, alpha=0.6, label='Sample Histogram')
-            ax.set_title(f"{dist_name} PDF vs. Sample Histogram")
-            ax.set_ylabel("Density")
-        else: # Poisson
-            x = np.arange(dist.ppf(0.001), dist.ppf(0.999))
-            ax.plot(x, dist.pmf(x), 'ro', ms=8, label='PMF')
-            ax.vlines(x, 0, dist.pmf(x), colors='r', lw=2)
-            ax.hist(sample, bins=np.arange(x[0], x[-1]+2)-0.5, density=True, alpha=0.6, label='Sample Histogram')
-            ax.set_title(f"{dist_name} PMF vs. Sample Histogram")
-            ax.set_ylabel("Probability")
-        ax.legend()
-        st.pyplot(fig)
+        view_mode = st.radio("View Mode", ("Executive View", "Data Scientist View"), key='view_mode', horizontal=True, disabled=ab_mode)
+        seed = st.number_input("Random Seed", 0, 1000, int(defaults.get('seed', 42)), 1, key='seed')
+        render_glossary()
 
-    # CDF Plot
-    with col2:
-        fig, ax = plt.subplots()
-        if dist_name in ["Normal", "Exponential"]:
-            x = np.linspace(dist.ppf(0.001), dist.ppf(0.999), 200)
-            ax.plot(x, dist.cdf(x), 'b-', lw=2, label='CDF')
-        else: # Poisson
-            x = np.arange(dist.ppf(0.001), dist.ppf(0.999))
-            ax.step(x, dist.cdf(x), 'b-', where='post', lw=2, label='CDF')
-
-        # Add empirical CDF
-        ecdf_x = np.sort(sample)
-        ecdf_y = np.arange(1, len(sample) + 1) / len(sample)
-        ax.plot(ecdf_x, ecdf_y, 'g--', lw=2, label='Empirical CDF')
-
-        ax.set_title(f"{dist_name} CDF vs. Empirical CDF")
-        ax.set_ylabel("Cumulative Probability")
-        ax.legend()
-        st.pyplot(fig)
-
-    # --- Interactive Demo ---
-    if dist_name == "Normal":
-        with st.expander("Explore the Central Limit Theorem (CLT)"):
-            st.write(
-                "The Central Limit Theorem states that the distribution of sample means "
-                "approximates a normal distribution, regardless of the population's distribution, "
-                "as the sample size gets larger."
-            )
-
-            clt_sample_size = st.slider("CLT Sample Size", 10, 500, 30, 5, key="clt_sample_size")
-            num_samples = st.slider("Number of Samples", 100, 5000, 1000, 100, key="num_samples")
-
-            sample_means = [np.mean(dist.rvs(size=clt_sample_size)) for _ in range(num_samples)]
-
-            fig, ax = plt.subplots()
-            ax.hist(sample_means, bins=50, density=True, alpha=0.7, label='Histogram of Sample Means')
-
-            # Overlay normal distribution
-            clt_mean = np.mean(sample_means)
-            clt_std = np.std(sample_means)
-            x = np.linspace(clt_mean - 4*clt_std, clt_mean + 4*clt_std, 100)
-            ax.plot(x, stats.norm.pdf(x, clt_mean, clt_std), 'r-', lw=2, label='Normal Approximation')
-
-            ax.set_title("Distribution of Sample Means")
-            ax.set_xlabel("Sample Mean")
-            ax.set_ylabel("Density")
-            ax.legend()
-            st.pyplot(fig)
+    try:
+        if ab_mode:
+            dist_A, params_A, n_A, M_A = params['A']
+            dist_B, params_B, n_B, M_B = params['B']
+            means_A, _, _, stats_A = run_simulation(dist_A, params_A, n_A, M_A, seed)
+            means_B, _, _, stats_B = run_simulation(dist_B, params_B, n_B, M_B, seed)
+            st.header("A/B Comparison Summary")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Mean Δ (A-B)", f"{stats_A['empirical_mean'] - stats_B['empirical_mean']:+.3f}")
+            c2.metric("Variance Δ (A-B)", f"{stats_A['empirical_var'] - stats_B['empirical_var']:+.3f}")
+            c3.metric("Skewness Δ (A-B)", f"{stats_A['empirical_skew'] - stats_B['empirical_skew']:+.3f}")
+            c1, c2 = st.columns(2)
+            with c1: fig_A = render_executive_view(means_A, stats_A, n_A, f"Scenario A: {dist_A}")
+            with c2: fig_B = render_executive_view(means_B, stats_B, n_B, f"Scenario B: {dist_B}")
+        else:
+            dist, dist_params, n, M = params['A']
+            means, base_dist, base_sample, stats_dict = run_simulation(dist, dist_params, n, M, seed)
+            if view_mode == "Executive View":
+                hero_fig = render_executive_view(means, stats_dict, n)
+                all_params = {'dist_A': dist, 'params_A': dist_params, 'n_A': n, 'M_A': M, 'seed': seed}
+                render_reproducibility_section(all_params, hero_fig)
+            else:
+                render_data_scientist_view(means, base_dist, base_sample, stats_dict, dist, n, M)
+                hero_fig = create_hero_histogram(means, stats_dict['theoretical_mean'], stats_dict['theoretical_std'], "Distribution of Sample Means")
+                all_params = {'dist_A': dist, 'params_A': dist_params, 'n_A': n, 'M_A': M, 'seed': seed}
+                render_reproducibility_section(all_params, hero_fig)
+    except (ValueError, TypeError, KeyError) as e:
+        st.error(f"An error occurred: {e}. Please check your parameters.")
 
 if __name__ == "__main__":
     main()
