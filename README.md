@@ -1,15 +1,49 @@
-# Time on Page vs Revenue Analysis
+# Statistical Distribution Explorer
 
-This folder contains:
-- Executive_Report.pdf : Executive-style summary with visuals and insights.
-- Technical_Appendix.html : Full regression tables, code snippets, and notes.
-- testdata.csv : The raw dataset used for analysis.
-- analysis.py : End-to-end script for data cleaning, exploration, regression, and plotting.
+An interactive Streamlit web app to visualize and understand common statistical distributions: Normal, Poisson, and Exponential.
 
-## How to Run in VS Code
-1. Open the folder in VS Code.
-2. Ensure you have Python 3.9+ installed.
-3. Install required libraries:
-   pip install pandas numpy matplotlib seaborn statsmodels scipy fpdf
-4. Run analysis.py step by step or all at once.
-5. Outputs will be saved in an 'outputs/' folder.
+## ✨ Features
+
+*   **Interactive Controls**: Adjust distribution parameters (e.g., mean, standard deviation, lambda) using sliders.
+*   **Multiple Distributions**: Choose between Normal, Poisson, and Exponential distributions.
+*   **Visualizations**:
+    *   Probability Density/Mass Function (PDF/PMF) plots.
+    *   Cumulative Distribution Function (CDF) plots.
+*   **Interactive Demo**: A simulation of the Central Limit Theorem for the Normal distribution.
+*   **Key Statistics**: View calculated mean, variance, skewness, and kurtosis.
+*   **Data Export**: Download a sample of generated data as a CSV file.
+*   **Reproducibility**: Set a random seed to get the same results every time.
+
+## 🚀 Live Demo
+
+[**Launch the Streamlit App**](https://your-streamlit-app-url.streamlit.app)
+
+*(Note: You will need to deploy this app to Streamlit Cloud to get a shareable link.)*
+
+## 🛠️ Setup and Installation
+
+To run this app locally, follow these steps:
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/your-username/your-repo-name.git
+    cd your-repo-name
+    ```
+
+2.  **Create and activate a virtual environment (recommended):**
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+    ```
+
+3.  **Install the required packages:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+4.  **Run the Streamlit app:**
+    ```bash
+    streamlit run streamlit_app.py
+    ```
+
+The app should now be open in your web browser.
