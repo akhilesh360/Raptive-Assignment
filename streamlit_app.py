@@ -128,16 +128,13 @@ def render_data_scientist_view(sample_means, base_dist, base_sample, stats_dict,
         m, v, s, k = base_dist.stats(moments='mvsk')
         st.table(pd.DataFrame({"Moment": ["Mean", "Variance", "Skewness", "Kurtosis"], "Value": [f"{m:.3f}", f"{v:.3f}", f"{s:.3f}", f"{k:.3f}"]}))
 
-def render_reproducibility_section(params, hero_fig):
+def render_reproducibility_section(params):
     with st.expander("Export & Reproduce"):
         st.code(f"http://localhost:8501?{urlencode(params)}", language=None)
         code_snippet = f"run_simulation(dist_name='{params.get('dist_A')}', dist_params={params.get('params_A')}, n={params.get('n_A')}, M={params.get('M_A')}, seed={params.get('seed')})"
         st.code(textwrap.dedent(code_snippet), language="python")
-        c1, c2 = st.columns(2)
         settings_json = json.dumps(params, indent=2, default=str)
-        c1.download_button("Download Settings (JSON)", settings_json, "clt_settings.json")
-        img_bytes = hero_fig.to_image(format="png", width=800, height=500, scale=2)
-        c2.download_button("Download Chart (PNG)", img_bytes, "clt_histogram.png")
+        st.download_button("Download Settings (JSON)", settings_json, "clt_settings.json")
 
 def render_glossary():
     with st.sidebar.expander("Glossary", expanded=False):
@@ -192,14 +189,13 @@ def main():
             dist, dist_params, n, M = params['A']
             means, base_dist, base_sample, stats_dict = run_simulation(dist, dist_params, n, M, seed)
             if view_mode == "Executive View":
-                hero_fig = render_executive_view(means, stats_dict, n)
+                render_executive_view(means, stats_dict, n)
                 all_params = {'dist_A': dist, 'params_A': dist_params, 'n_A': n, 'M_A': M, 'seed': seed}
-                render_reproducibility_section(all_params, hero_fig)
+                render_reproducibility_section(all_params)
             else:
                 render_data_scientist_view(means, base_dist, base_sample, stats_dict, dist, n, M)
-                hero_fig = create_hero_histogram(means, stats_dict['theoretical_mean'], stats_dict['theoretical_std'], "Distribution of Sample Means")
                 all_params = {'dist_A': dist, 'params_A': dist_params, 'n_A': n, 'M_A': M, 'seed': seed}
-                render_reproducibility_section(all_params, hero_fig)
+                render_reproducibility_section(all_params)
     except (ValueError, TypeError, KeyError) as e:
         st.error(f"An error occurred: {e}. Please check your parameters.")
 
