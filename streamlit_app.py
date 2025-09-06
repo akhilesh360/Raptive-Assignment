@@ -95,7 +95,7 @@ def get_scenario_params(suffix, defaults):
     elif dist_name == "Pareto":
         params['α'] = st.slider("Shape (α)", 0.1, 5.0, float(defaults.get(f'α_{suffix}', 2.5)), 0.1, key=f'α_{suffix}')
         if params['α'] <= 2: st.warning("For Pareto with α ≤ 2, variance is infinite and the CLT does not apply in its standard form.")
-
+    
     n = st.slider("Sample Size (n)", 1, 500, int(defaults.get(f'n_{suffix}', 30)), 1, key=f'n_{suffix}')
     M = st.slider("Repetitions (M)", 100, 10000, int(defaults.get(f'M_{suffix}', 1000)), 100, key=f'M_{suffix}')
     return dist_name, params, n, M
@@ -161,7 +161,7 @@ def main():
         if st.button("Large n (n=200)", use_container_width=True, disabled=ab_mode): st.query_params.n_A = 200; st.rerun()
         if st.button("Heavy Tail (Pareto, α=1.5)", use_container_width=True, disabled=ab_mode):
             st.query_params.dist_A = "Pareto"; st.query_params.α_A = 1.5; st.rerun()
-
+        
         params = {}
         if ab_mode:
             c1, c2 = st.columns(2)
@@ -169,7 +169,7 @@ def main():
             with c2: params['B'] = get_scenario_params("B", defaults)
         else:
             params['A'] = get_scenario_params("A", defaults)
-
+        
         view_mode = st.radio("View Mode", ("Executive View", "Data Scientist View"), key='view_mode', horizontal=True, disabled=ab_mode)
         seed = st.number_input("Random Seed", 0, 1000, int(defaults.get('seed', 42)), 1, key='seed')
         render_glossary()
