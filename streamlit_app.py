@@ -50,6 +50,28 @@ def plot_qq(sample_means, label="Scenario"):
     ax.set_title(f"Q-Q Plot ({label})")
     return fig
 
+# --- Helper: Animation Tab ---
+def show_animation_tab(mu, sigma, n, k, seed):
+    st.header("Convergence of Sample Means (Animated)")
+    st.markdown("> **Takeaway:** As we add more samples, the histogram of sample means tightens and approaches Normal.")
+
+    frames = st.slider("Frames (increments of 100 samples)", 5, 50, 20)
+    anim_speed = st.slider("Animation speed (seconds per frame)", 0.1, 1.0, 0.3)
+
+    if st.button("▶️ Start Animation"):
+        with st.spinner("Generating animation frames..."):
+            all_samples = generate_sample_means(stats.norm(mu, sigma), n, frames*100, seed)
+
+        placeholder = st.empty()
+        for f in range(1, frames+1):
+            subset = all_samples[:f*100]
+            fig = plot_histogram(subset, mu, sigma, n, f"{f*100} samples")
+            placeholder.pyplot(fig)
+            plt.close(fig)
+            st.sleep(anim_speed)
+
+        st.success("✅ Animation finished! Notice how the distribution stabilizes.")
+
 # --- App Main ---
 def main():
     st.set_page_config(page_title="Central Limit Theorem Lab", page_icon="📊", layout="wide")
@@ -87,10 +109,16 @@ def main():
         # A/B comparison toggle
         ab_mode = st.toggle("A/B Comparison Mode")
 
-        # Share link
+        # Share link (NEW API)
         st.subheader("Share Scenario")
-        current_params = {"mu": mu, "sigma": sigma, "n": n, "k": k, "seed": seed}
-        st.experimental_set_query_params(**current_params)
+        st.query_params.clear()
+        st.query_params.update({
+            "mu": mu,
+            "sigma": sigma,
+            "n": n,
+            "k": k,
+            "seed": seed
+        })
         st.caption("Copy page URL to share this setup.")
 
     # Preset message banner
@@ -144,7 +172,6 @@ def main():
             """)
 
         with tab3:
-            # Animation in A/B mode
             show_animation_tab(mu, sigma, n, k, seed)
 
     # --- Standard Mode ---
@@ -205,30 +232,7 @@ def main():
             """)
 
         with tab5:
-            # Animation in normal mode
             show_animation_tab(mu, sigma, n, k, seed)
-
-# --- Helper: Animation Tab ---
-def show_animation_tab(mu, sigma, n, k, seed):
-    st.header("Convergence of Sample Means (Animated)")
-    st.markdown("> **Takeaway:** As we add more samples, the histogram of sample means tightens and approaches Normal.")
-
-    frames = st.slider("Frames (increments of 100 samples)", 5, 50, 20)
-    anim_speed = st.slider("Animation speed (seconds per frame)", 0.1, 1.0, 0.3)
-
-    if st.button("▶️ Start Animation"):
-        with st.spinner("Generating animation frames..."):
-            all_samples = generate_sample_means(stats.norm(mu, sigma), n, frames*100, seed)
-
-        placeholder = st.empty()
-        for f in range(1, frames+1):
-            subset = all_samples[:f*100]
-            fig = plot_histogram(subset, mu, sigma, n, f"{f*100} samples")
-            placeholder.pyplot(fig)
-            plt.close(fig)
-            st.sleep(anim_speed)
-
-        st.success("✅ Animation finished! Notice how the distribution stabilizes.")
 
 if __name__ == "__main__":
     main()
