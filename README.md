@@ -1,49 +1,24 @@
-# Statistical Distribution Explorer
+# Distribution Lab (Streamlit) — Normal + CLT
 
-An interactive Streamlit web app to visualize and understand common statistical distributions: Normal, Poisson, and Exponential.
+An interactive Streamlit app that demonstrates how parameters change a Normal
+distribution and visualizes the Central Limit Theorem (CLT).
 
-## ✨ Features
+## Live Demo
+<your Streamlit Cloud URL>
 
-*   **Interactive Controls**: Adjust distribution parameters (e.g., mean, standard deviation, lambda) using sliders.
-*   **Multiple Distributions**: Choose between Normal, Poisson, and Exponential distributions.
-*   **Visualizations**:
-    *   Probability Density/Mass Function (PDF/PMF) plots.
-    *   Cumulative Distribution Function (CDF) plots.
-*   **Interactive Demo**: A simulation of the Central Limit Theorem for the Normal distribution.
-*   **Key Statistics**: View calculated mean, variance, skewness, and kurtosis.
-*   **Data Export**: Download a sample of generated data as a CSV file.
-*   **Reproducibility**: Set a random seed to get the same results every time.
+## Features
+- Adjustable μ and σ with instant PDF/CDF updates
+- Probability shading P(a ≤ X ≤ b)
+- CLT simulation: histogram of sample means vs. N(μ, σ/√n)
+- Stats: mean, variance, skewness, kurtosis
+- Download simulated data as CSV
 
-## 🚀 Live Demo
+## Run Locally
+```bash
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
 
-[**Launch the Streamlit App**](https://your-streamlit-app-url.streamlit.app)
-
-*(Note: You will need to deploy this app to Streamlit Cloud to get a shareable link.)*
-
-## 🛠️ Setup and Installation
-
-To run this app locally, follow these steps:
-
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/your-username/your-repo-name.git
-    cd your-repo-name
-    ```
-
-2.  **Create and activate a virtual environment (recommended):**
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-    ```
-
-3.  **Install the required packages:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-4.  **Run the Streamlit app:**
-    ```bash
-    streamlit run streamlit_app.py
-    ```
-
-The app should now be open in your web browser.
+## Deploy (Streamlit Community Cloud)
+- New app → connect this repo → path: streamlit_app.py → Python `runtime.txt` set to 3.11.
+- Deploy!

@@ -1,7 +1,5 @@
 streamlit
 numpy
-scipy
-matplotlib
 pandas
-plotly
-kaleido
+matplotlib
+scipy
