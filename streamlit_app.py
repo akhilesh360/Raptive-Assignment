@@ -98,18 +98,15 @@ with st.sidebar:
             st.session_state.n = 5
             st.session_state.loc = 0.0
             st.session_state.scale = 1.0
-            st.session_state.preset_banner = "small_n"
         elif preset == 'large_n':
             st.session_state.dist_name = "Normal"
             st.session_state.n = 500
             st.session_state.loc = 0.0
             st.session_state.scale = 1.0
-            st.session_state.preset_banner = "large_n"
         elif preset == 'heavy_tail':
             st.session_state.dist_name = "Pareto"
             st.session_state.n = 30
             st.session_state.b = 1.5 # A heavier tail
-            st.session_state.preset_banner = "heavy_tail"
 
     preset_cols = st.columns(3)
     preset_cols[0].button("Small n", on_click=set_preset, args=('small_n',), use_container_width=True)
@@ -215,10 +212,6 @@ else:
     # Single Mode
     with st.spinner(f"Simulating {M} samples of size {n} from a {dist_name} distribution..."):
         sample_means = run_simulation(dist_name, dist_params, n, M, seed)['Sample Mean']
-
-    # Preset Narratives
-    if n < 30: st.info("💡 **Small n:** With a small sample size (n < 30), expect noisier sample means and slower convergence to normality.")
-    if dist_name == "Pareto": st.info("💡 **Heavy-Tailed Distribution (Pareto):** This distribution has outliers that can cause the sample mean to stabilize much slower.")
 
     # --- View Routing ---
     if persona == "Executive":
