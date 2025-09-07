@@ -85,7 +85,8 @@ with st.sidebar:
     # --- UX Controls ---
     st.divider()
     quick_preview = st.toggle("🚀 Quick Preview", value=True, help="Cap simulations at M=200 for faster interaction.")
-    if quick_preview: M = min(M, 200) if ab_mode else min(st.session_state.M_single, 200)
+    if quick_preview:
+        M = min(M, 200)
 
     # --- Preset Scenarios ---
     st.divider()
@@ -264,16 +265,15 @@ else:
         
         st.markdown("> **Takeaway:** The distribution of sample means becomes taller, narrower, and more bell-shaped as sample size `n` increases, visually confirming the Central Limit Theorem.")
         fig, ax = plt.subplots(figsize=(10, 5)); plot_hist(ax, sample_means, dist_name, dist_params, n, f"Distribution of Sample Means (n={n}, M={M})"); st.pyplot(fig)
-        with st.expander("What am I looking at?"):
-            st.markdown("""
-            This chart shows the **distribution of sample means**. Here's what that means:
+        st.info("""
+        **What am I looking at?**
+        This chart shows the **distribution of sample means**. Here's what that means:
+        1.  We take a "sample" of `n` data points from the base distribution you selected.
+        2.  We calculate the average (the "mean") of that one sample.
+        3.  We repeat this process `M` times, giving us `M` different sample means.
 
-            1.  We take a "sample" of `n` data points from the base distribution you selected.
-            2.  We calculate the average (the "mean") of that one sample.
-            3.  We repeat this process `M` times, giving us `M` different sample means.
-
-            The histogram above shows the shape of these `M` sample means. The **Central Limit Theorem (CLT)** is the magic here: no matter the shape of the original distribution, the distribution of its sample means will tend to look like a normal (bell-shaped) curve, especially when `n` is large.
-            """)
+        The histogram above shows the shape of these `M` sample means. The **Central Limit Theorem (CLT)** is the magic here: no matter the shape of the original distribution, the distribution of its sample means will tend to look like a normal (bell-shaped) curve, especially when `n` is large.
+        """, icon="ℹ️")
 
     elif persona == "Data Scientist":
         st.header("🔬 Data Scientist Deep Dive")
@@ -288,19 +288,17 @@ else:
                 fig_hist, ax_hist = plt.subplots();
                 plot_hist(ax_hist, sample_means, dist_name, dist_params, n, "Distribution of Sample Means");
                 st.pyplot(fig_hist)
-                with st.expander("What am I looking at?"):
-                    st.markdown("This is the same histogram from the Executive view, showing the distribution of sample means. It should appear bell-shaped if the CLT has taken effect.")
+                st.info("This is the same histogram from the Executive view, showing the distribution of sample means. It should appear bell-shaped if the CLT has taken effect.", icon="ℹ️")
             with col2:
                 fig_qq, ax_qq = plt.subplots();
                 plot_qq(ax_qq, sample_means, "Q-Q Plot vs. Normal");
                 st.pyplot(fig_qq)
-                with st.expander("What am I looking at?"):
-                    st.markdown("""
-                    A **Quantile-Quantile (Q-Q) Plot** compares the quantiles of our data (the sample means) against the theoretical quantiles of a normal distribution.
-                    - If the data is perfectly normal, the blue dots will form a straight 45-degree line.
-                    - The red line represents this ideal 45-degree line.
-                    - The shaded area is a **confidence band**. If the dots stay within this band, it provides strong evidence for normality.
-                    """)
+                st.info("""
+                A **Quantile-Quantile (Q-Q) Plot** compares the quantiles of our data (the sample means) against the theoretical quantiles of a normal distribution.
+                - If the data is perfectly normal, the blue dots will form a straight 45-degree line.
+                - The red line represents this ideal 45-degree line.
+                - The shaded area is a **confidence band**. If the dots stay within this band, it provides strong evidence for normality.
+                """, icon="ℹ️")
 
             # Coverage Percentage
             theory_mean = base_dist.mean()
