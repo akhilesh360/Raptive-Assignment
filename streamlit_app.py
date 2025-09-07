@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
 import urllib.parse
+import statsmodels.api as sm
 
 # --- Page Config ---
 st.set_page_config(
@@ -86,8 +87,52 @@ with st.sidebar:
     quick_preview = st.toggle("🚀 Quick Preview", value=True, help="Cap simulations at M=200 for faster interaction.")
     if quick_preview: M = min(M, 200) if ab_mode else min(st.session_state.M_single, 200)
 
+    # --- Preset Scenarios ---
+    st.divider()
+    st.header("Preset Scenarios")
+    def set_preset(preset):
+        st.session_state.ab_mode = False # Presets are for single mode
+        if preset == 'small_n':
+            st.session_state.dist_name = "Normal"
+            st.session_state.n = 5
+            st.session_state.loc = 0.0
+            st.session_state.scale = 1.0
+            st.session_state.preset_banner = "small_n"
+        elif preset == 'large_n':
+            st.session_state.dist_name = "Normal"
+            st.session_state.n = 500
+            st.session_state.loc = 0.0
+            st.session_state.scale = 1.0
+            st.session_state.preset_banner = "large_n"
+        elif preset == 'heavy_tail':
+            st.session_state.dist_name = "Pareto"
+            st.session_state.n = 30
+            st.session_state.b = 1.5 # A heavier tail
+            st.session_state.preset_banner = "heavy_tail"
+
+    preset_cols = st.columns(3)
+    preset_cols[0].button("Small n", on_click=set_preset, args=('small_n',), use_container_width=True)
+    preset_cols[1].button("Large n", on_click=set_preset, args=('large_n',), use_container_width=True)
+    preset_cols[2].button("Heavy Tail", on_click=set_preset, args=('heavy_tail',), use_container_width=True)
+
+    # --- Distribution Explainers ---
+    if not ab_mode:
+        if dist_name == "Normal": st.info("Symmetric, bell-shaped. CLT converges quickly.")
+        elif dist_name == "Uniform": st.info("Flat, equal probability in a range. Converges quickly.")
+        elif dist_name == "Exponential": st.info("Skewed with a tail. Slower convergence than Normal.")
+        elif dist_name == "Pareto": st.info("Heavy-tailed with extreme outliers. Slowest convergence.")
+
     # --- Glossary and Export ---
     with st.expander("📚 Glossary & Sharing"):
+        st.markdown("""
+        - **CLT (Central Limit Theorem):** States that the distribution of sample means approximates a normal distribution as the sample size gets larger, regardless of the population's distribution.
+        - **LLN (Law of Large Numbers):** States that the average of the results obtained from a large number of trials should be close to the expected value.
+        - **Skewness:** A measure of a distribution's asymmetry. Positive skew has a long right tail; negative skew has a long left tail.
+        - **Kurtosis:** A measure of the "tailedness" of a distribution. High kurtosis means more outliers (heavy tails).
+        - **Heavy Tails:** A property of distributions where extreme events are more likely than in a normal distribution.
+        - **Normality Test:** A statistical process used to determine if a sample of data is well-modeled by a normal distribution (e.g., Shapiro-Wilk test).
+        """)
+        st.divider()
         st.markdown("Key terms and sharing options.")
         if st.button("Copy Link to Clipboard", use_container_width=True):
             st.query_params.from_dict(st.session_state)
@@ -123,16 +168,22 @@ def get_stats(data):
 def plot_hist(ax, data, dist_name, dist_params, n, title):
     """Plots the histogram and theoretical PDF."""
     dist = get_dist_from_params(dist_name, dist_params)
-    ax.hist(data, bins=50, density=True, alpha=0.7, color="#0072B2", label="Sample Means")
+    ax.hist(data, bins=50, density=True, alpha=0.7, color="#0072B2")
     clt_mu, clt_sigma = dist.mean(), dist.std() / np.sqrt(n)
     x = np.linspace(data.min(), data.max(), 200)
-    ax.plot(x, stats.norm.pdf(x, clt_mu, clt_sigma), 'r--', lw=2.5, label="Theoretical PDF")
-    ax.set_title(title, fontsize=14); ax.set_xlabel("Sample Mean"); ax.legend()
+    ax.plot(x, stats.norm.pdf(x, clt_mu, clt_sigma), 'r--', lw=3)
+    ax.set_title(title, fontsize=14); ax.set_xlabel("Sample Mean")
 
 def plot_qq(ax, data, title):
-    stats.probplot(data, dist="norm", plot=ax)
-    ax.get_lines()[0].set_markerfacecolor('#0072B2'); ax.get_lines()[1].set_color('r')
-    ax.set_title(title, fontsize=14); ax.set_xlabel("Theoretical Quantiles")
+    """Plots a Q-Q plot with confidence bands using statsmodels."""
+    sm.qqplot(data, line='s', ax=ax, dist=stats.norm)
+    ax.set_title(title, fontsize=14)
+    ax.set_xlabel("Theoretical Quantiles")
+    ax.set_ylabel("Sample Quantiles")
+    # Style the plot to match
+    ax.get_lines()[0].set_markerfacecolor('#0072B2')
+    ax.get_lines()[0].set_markeredgecolor('#0072B2')
+    ax.get_lines()[1].set_color('r')
 
 # --- Main App Logic ---
 if ab_mode:
@@ -172,45 +223,172 @@ else:
     if persona == "Executive":
         st.header("📈 Executive Dashboard")
         stats_data = get_stats(sample_means)
-        p_value = stats_data["p-value"]
+
+        # Calculate theoretical values
+        base_dist = get_dist_from_params(dist_name, dist_params)
+        theory_mean = base_dist.mean()
+        theory_var = base_dist.var() / n
+
+        # Determine color cues based on tolerance
+        mean_delta = stats_data['Mean'] - theory_mean
+        var_delta = stats_data['Variance'] - theory_var
+
+        # Tolerance: 5% for variance, 0.25 for skewness
+        var_color = "normal" if abs(var_delta / theory_var) < 0.05 else "inverse"
+        skew_color = "normal" if abs(stats_data['Skewness']) < 0.25 else "inverse"
+        p_value_color = "normal" if stats_data['p-value'] >= 0.05 else "inverse"
+
         st.markdown("##### Key Performance Indicators")
         kpi_cols = st.columns(4)
-        kpi_cols[0].metric("Sample Mean", f"{stats_data['Mean']:.3f}", help="The average of all sample means.")
-        kpi_cols[1].metric("Variance", f"{stats_data['Variance']:.3f}", help="Spread of sample means. Decreases as 'n' increases.")
-        kpi_cols[2].metric("Skewness", f"{stats_data['Skewness']:.3f}", help="Asymmetry. Near 0 is symmetric.")
-        kpi_cols[3].metric("Normality (p-value)", f"{p_value:.3f}", help="If p ≥ 0.05, we consider it normal.", delta_color="normal" if p_value >= 0.05 else "inverse")
+        kpi_cols[0].metric(
+            "Sample Mean", f"{stats_data['Mean']:.3f}",
+            delta=f"{mean_delta:.3f} vs μ",
+            help="The average of all the sample means. The Central Limit Theorem states this should be very close to the true population mean (μ)."
+        )
+        kpi_cols[1].metric(
+            "Variance", f"{stats_data['Variance']:.4f}",
+            delta=f"{var_delta:.4f} vs σ²/n",
+            delta_color=var_color,
+            help="The variance of the sample means. The CLT predicts this will be the population variance (σ²) divided by the sample size (n). Green if empirical variance is within 10% of theoretical."
+        )
+        kpi_cols[2].metric(
+            "Skewness", f"{stats_data['Skewness']:.3f}",
+            delta_color=skew_color,
+            help="A measure of asymmetry. A value near 0 indicates a symmetric, bell-like curve. Green if absolute value is < 0.5."
+        )
+        kpi_cols[3].metric(
+            "Normality (p-value)", f"{stats_data['p-value']:.3f}",
+            delta_color=p_value_color,
+            help="Result from the Shapiro-Wilk test for normality. A high p-value (p ≥ 0.05) means we fail to reject the null hypothesis that the data is normally distributed. Green indicates 'passes' the normality test."
+        )
         
         st.markdown("> **Takeaway:** The distribution of sample means becomes taller, narrower, and more bell-shaped as sample size `n` increases, visually confirming the Central Limit Theorem.")
         fig, ax = plt.subplots(figsize=(10, 5)); plot_hist(ax, sample_means, dist_name, dist_params, n, f"Distribution of Sample Means (n={n}, M={M})"); st.pyplot(fig)
 
     elif persona == "Data Scientist":
         st.header("🔬 Data Scientist Deep Dive")
-        tab1, tab2 = st.tabs(["CLT Diagnostics", "Base Distribution Inspector"])
+        tab1, tab2, tab3 = st.tabs(["CLT Diagnostics", "Convergence Trace", "Base Distribution Inspector"])
+
+        base_dist = get_dist_from_params(dist_name, dist_params)
+
         with tab1:
-            st.markdown("> **Takeaway:** The Q-Q plot's linearity and the histogram's bell shape reinforce the normality conclusion from the Shapiro-Wilk test.")
+            st.markdown("> **Takeaway:** The Q-Q plot's linearity and high coverage % within ±2σ support the normality conclusion.")
             col1, col2 = st.columns(2)
-            with col1: fig_hist, ax_hist = plt.subplots(); plot_hist(ax_hist, sample_means, dist_name, dist_params, n, "Distribution of Sample Means"); st.pyplot(fig_hist)
-            with col2: fig_qq, ax_qq = plt.subplots(); plot_qq(ax_qq, sample_means, "Q-Q Plot vs. Normal"); st.pyplot(fig_qq)
+            with col1:
+                fig_hist, ax_hist = plt.subplots();
+                plot_hist(ax_hist, sample_means, dist_name, dist_params, n, "Distribution of Sample Means");
+                st.pyplot(fig_hist)
+            with col2:
+                fig_qq, ax_qq = plt.subplots();
+                plot_qq(ax_qq, sample_means, "Q-Q Plot vs. Normal");
+                st.pyplot(fig_qq)
+
+            # Coverage Percentage
+            theory_mean = base_dist.mean()
+            theory_std = base_dist.std() / np.sqrt(n)
+            within_1_std = np.sum((sample_means >= theory_mean - theory_std) & (sample_means <= theory_mean + theory_std)) / M
+            within_2_std = np.sum((sample_means >= theory_mean - 2*theory_std) & (sample_means <= theory_mean + 2*theory_std)) / M
+
+            st.markdown("##### Coverage Statistics")
+            cov_cols = st.columns(2)
+            cov_cols[0].metric("Coverage within ±1σ", f"{within_1_std:.2%}", help="Expected: ~68%")
+            cov_cols[1].metric("Coverage within ±2σ", f"{within_2_std:.2%}", help="Expected: ~95%")
+
         with tab2:
+            st.markdown("> **Takeaway:** As the number of samples (M) increases, the running average of the sample means converges to the true population mean (μ), illustrating the Law of Large Numbers.")
+
+            # Calculate running mean and variance
+            running_means = np.cumsum(sample_means) / np.arange(1, M + 1)
+
+            fig, ax = plt.subplots(figsize=(10, 5))
+            ax.plot(np.arange(1, M + 1), running_means, label="Running Sample Mean")
+            ax.axhline(y=theory_mean, color='r', linestyle='--', label=f"Theoretical Mean (μ={theory_mean:.3f})")
+            ax.set_title("Convergence of Sample Mean")
+            ax.set_xlabel("Number of Samples (M)")
+            ax.set_ylabel("Mean Value")
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+            st.pyplot(fig)
+
+        with tab3:
             st.markdown("> **Takeaway:** This chart shows the underlying distribution we are sampling from. The CLT works even if this distribution is not normal itself.")
-            dist = get_dist_from_params(dist_name, dist_params)
-            single_sample = dist.rvs(size=n, random_state=seed)
+            single_sample = base_dist.rvs(size=n, random_state=seed)
             fig, ax = plt.subplots()
             ax.hist(single_sample, bins=30, density=True, alpha=0.7, color="#009E73", label=f"One Sample (n={n})")
             if dist_name != "Pareto":
-                x = np.linspace(dist.ppf(0.001), dist.ppf(0.999), 200)
-                ax.plot(x, dist.pdf(x), 'k--', lw=2, label="Theoretical PDF")
+                x = np.linspace(base_dist.ppf(0.001), base_dist.ppf(0.999), 200)
+                ax.plot(x, base_dist.pdf(x), 'k--', lw=2, label="Theoretical PDF")
             ax.set_title(f"'{dist_name}' Base Distribution vs. One Sample"); ax.legend(); st.pyplot(fig)
+
+def generate_markdown_summary(dist_name, dist_params, n, M, seed, stats_data):
+    """Generates a detailed Markdown summary of the simulation."""
+    param_str = ", ".join([f"{k}={v}" for k, v in dist_params.items()])
+    theory_var = get_dist_from_params(dist_name, dist_params).var() / n
+    p_val_status = "Pass" if stats_data['p-value'] >= 0.05 else "Fail"
+
+    summary = f"""
+- **Scenario**: {dist_name}({param_str}), n={n}, M={M}, seed={seed}
+- **Sample Mean**: {stats_data['Mean']:.4f}
+- **Sample Variance**: {stats_data['Variance']:.4f} (vs. Theory: {theory_var:.4f})
+- **Skewness**: {stats_data['Skewness']:.4f}
+- **Shapiro p-value**: {stats_data['p-value']:.3f} → {p_val_status} Normality
+"""
+    return summary
+
+def generate_python_snippet(dist_name, dist_params, n, M, seed):
+    """Generates a Python script to reproduce the simulation."""
+    return f"""
+import numpy as np
+from scipy import stats
+
+# Simulation Parameters
+dist_name = "{dist_name}"
+dist_params = {dist_params}
+n = {n}
+M = {M}
+seed = {seed}
+
+# Recreate distribution
+if dist_name == "Normal": dist = stats.norm(**dist_params)
+elif dist_name == "Uniform": dist = stats.uniform(**dist_params)
+elif dist_name == "Exponential": dist = stats.expon(**dist_params)
+elif dist_name == "Pareto": dist = stats.pareto(**dist_params)
+
+# Run simulation
+np.random.seed(seed)
+samples = dist.rvs(size=(M, n))
+sample_means = np.mean(samples, axis=1)
+
+# Print results
+print(f"Simulation Results for {{dist_name}} (n={{n}}, M={{M}}):")
+print(f"  - Sample Mean: {{np.mean(sample_means):.4f}}")
+print(f"  - Sample Variance: {{np.var(sample_means):.4f}}")
+"""
 
 # --- Downloads in Sidebar ---
 with st.sidebar:
     st.divider()
     st.markdown("### 📥 Export")
     if ab_mode:
-        col1, col2 = st.columns(2)
-        col1.download_button("CSV (A)", means_a.to_csv(), f"clt_A.csv", "text/csv")
-        col2.download_button("CSV (B)", means_b.to_csv(), f"clt_B.csv", "text/csv")
+        st.markdown("**Scenario A**")
+        st.download_button("CSV (A)", means_a.to_csv(), f"clt_A.csv", "text/csv", key="csv_a")
+        md_a = generate_markdown_summary(dist_name_a, dist_params_a, n_a, M, seed, stats_a)
+        st.download_button("Summary (A)", md_a, "summary_A.md", "text/markdown", key="md_a")
+        py_a = generate_python_snippet(dist_name_a, dist_params_a, n_a, M, seed)
+        st.download_button("Python (A)", py_a, "reproduce_A.py", "text/python", key="py_a")
+
+        st.markdown("**Scenario B**")
+        st.download_button("CSV (B)", means_b.to_csv(), f"clt_B.csv", "text/csv", key="csv_b")
+        md_b = generate_markdown_summary(dist_name_b, dist_params_b, n_b, M, seed, stats_b)
+        st.download_button("Summary (B)", md_b, "summary_B.md", "text/markdown", key="md_b")
+        py_b = generate_python_snippet(dist_name_b, dist_params_b, n_b, M, seed)
+        st.download_button("Python (B)", py_b, "reproduce_B.py", "text/python", key="py_b")
     else:
         st.download_button("Download Sample Means (CSV)", sample_means.to_csv(), f"clt_data.csv", "text/csv")
-        summary_md = f"# CLT Summary\n- Dist: {dist_name}\n- n: {n}\n- M: {M}\n" + "\n".join([f"- {k}: {v:.3f}" for k,v in get_stats(sample_means).items()])
+
+        stats_data = get_stats(sample_means)
+        summary_md = generate_markdown_summary(dist_name, dist_params, n, M, seed, stats_data)
         st.download_button("Download Summary (MD)", summary_md, "clt_summary.md", "text/markdown")
+
+        python_snippet = generate_python_snippet(dist_name, dist_params, n, M, seed)
+        st.download_button("Download Python Snippet", python_snippet, "reproduce_clt.py", "text/python")
