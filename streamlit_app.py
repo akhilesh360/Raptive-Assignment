@@ -3,152 +3,196 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
+import urllib.parse
 
-# --- Core Functions ---
-@st.cache_data
-def generate_sample_means(dist, n, k, seed):
-    """Generate k sample means of size n from a given distribution."""
-    np.random.seed(seed)
-    # Each row is a sample, so we generate a k x n matrix
-    samples = dist.rvs(size=(k, n))
-    # Calculate the mean of each row (each sample)
-    return np.mean(samples, axis=1)
+# --- Page Config ---
+st.set_page_config(
+    page_title="CLT Simulator Pro",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-def main():
-    st.set_page_config(
-        page_title="Normal Distribution & CLT Lab",
-        page_icon="📊",
-        layout="wide"
+# --- App Title ---
+st.title("🏛️ Central Limit Theorem (CLT) Workbench")
+st.markdown("An interactive app for Executives and Data Scientists to explore the CLT.")
+
+# --- State Management and URL Params ---
+def get_from_params(param, default, type_func):
+    """Helper to get and type-cast a URL parameter."""
+    try:
+        return type_func(st.query_params.get(param, default))
+    except (ValueError, TypeError):
+        return default
+
+# --- Sidebar Controls ---
+with st.sidebar:
+    st.header("👤 Persona")
+    persona = st.radio(
+        "Choose your view",
+        ("Executive", "Data Scientist"),
+        horizontal=True,
+        key='persona',
+        index=["Executive", "Data Scientist"].index(get_from_params('persona', "Executive", str))
     )
-    st.title("📊 Normal Distribution & CLT Lab")
 
-    with st.expander("What is this app?", expanded=True):
-        st.markdown("""
-        This application demonstrates two fundamental concepts in statistics:
-        1.  **The Normal Distribution:** A bell-shaped curve described by its mean (μ) and standard deviation (σ). You can adjust these parameters in the **Distribution** tab.
-        2.  **The Central Limit Theorem (CLT):** This theorem states that if you take many samples from *any* distribution and calculate their means, the distribution of those sample means will look like a Normal distribution. Explore this in the **Central Limit Theorem** tab.
-        """)
+    ab_mode = st.toggle("A/B Comparison Mode", key='ab_mode', value=get_from_params('ab_mode', False, bool))
 
-    # --- Sidebar for controls ---
-    with st.sidebar:
-        st.header("Distribution Parameters")
-        mu = st.slider("Mean (μ)", -5.0, 5.0, 0.0, 0.1, help="The center of the Normal distribution.")
-        sigma = st.slider("Standard Deviation (σ)", 0.1, 5.0, 1.0, 0.1, help="The spread or width of the Normal distribution.")
+    # --- Simulation Controls ---
+    if ab_mode:
+        st.header("Shared Controls")
+        M = st.slider("Number of Samples (M)", 100, 20000, get_from_params('M', 1000, int), key='M')
+        seed = st.number_input("Random Seed", 0, 10000, get_from_params('seed', 42, int), key='seed')
 
-        st.header("CLT Simulation Controls")
-        n = st.slider("Sample Size (n)", 1, 1000, 30, help="The number of data points in each sample.")
-        k = st.slider("Number of Samples (k)", 100, 10000, 1000, help="The number of times we draw a sample of size n.")
-
-        st.header("Probability Shading")
-        # Ensure the range slider's bounds are reasonable relative to the distribution
-        plot_range_min = mu - 4 * sigma
-        plot_range_max = mu + 4 * sigma
-        prob_range = st.slider("Range [a, b]", plot_range_min, plot_range_max, (mu - sigma, mu + sigma), 0.1, help="Select a range [a, b] to calculate P(a ≤ X ≤ b).")
-
-        st.header("Reproducibility")
-        if 'seed' not in st.session_state:
-            st.session_state.seed = np.random.randint(0, 10000)
-
-        def resample():
-            st.session_state.seed = np.random.randint(0, 10000)
-        
-        st.number_input("Random Seed", 0, 10000, key='seed')
-        st.button("Resample", on_click=resample, use_container_width=True)
-
-    # --- Main area for plots and data ---
-    # Create the normal distribution object from scipy.stats
-    dist = stats.norm(loc=mu, scale=sigma)
-
-    tab1, tab2, tab3 = st.tabs(["Distribution", "Central Limit Theorem", "Data"])
-
-    with tab1:
-        st.header("Normal Distribution PDF & CDF")
-        
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-        
-        # PDF Plot
-        x = np.linspace(plot_range_min, plot_range_max, 1000)
-        y_pdf = dist.pdf(x)
-        ax1.plot(x, y_pdf, 'b-')
-        ax1.set_title("Probability Density Function (PDF)")
-        ax1.set_ylabel("Density")
-        ax1.grid(True)
-        
-        # Shading
-        a, b = prob_range
-        x_fill = np.linspace(a, b, 100)
-        y_fill = dist.pdf(x_fill)
-        ax1.fill_between(x_fill, y_fill, color='blue', alpha=0.3)
-        
-        # CDF Plot
-        y_cdf = dist.cdf(x)
-        ax2.plot(x, y_cdf, 'r-')
-        ax2.set_title("Cumulative Distribution Function (CDF)")
-        ax2.set_ylabel("Cumulative Probability")
-        ax2.grid(True)
-
-        st.pyplot(fig)
-        
-        # Calculated Probability
-        prob = dist.cdf(b) - dist.cdf(a)
-        st.metric(f"Probability P({a:.2f} ≤ X ≤ {b:.2f})", f"{prob:.4f}")
-
-    with tab2:
-        st.header("Central Limit Theorem Demonstration")
-        
-        sample_means = generate_sample_means(dist, n, k, st.session_state.seed)
-        
-        fig_clt, ax_clt = plt.subplots(figsize=(8, 6))
-        
-        # Histogram of sample means
-        ax_clt.hist(sample_means, bins=50, density=True, alpha=0.7, label="Empirical Sample Means")
-        
-        # Theoretical normal distribution overlay
-        clt_mu = mu
-        clt_sigma = sigma / np.sqrt(n)
-        x_clt = np.linspace(min(sample_means), max(sample_means), 1000)
-        y_clt = stats.norm.pdf(x_clt, loc=clt_mu, scale=clt_sigma)
-        ax_clt.plot(x_clt, y_clt, 'r--', linewidth=2, label=f"Theoretical N(μ, σ/√n)")
-        
-        # 95% CI
-        ci_lower = clt_mu - 1.96 * clt_sigma
-        ci_upper = clt_mu + 1.96 * clt_sigma
-        ax_clt.axvspan(ci_lower, ci_upper, color='red', alpha=0.1, label='95% Confidence Interval')
-
-        ax_clt.set_title("Distribution of Sample Means")
-        ax_clt.set_xlabel("Sample Mean Value")
-        ax_clt.set_ylabel("Density")
-        ax_clt.legend()
-        ax_clt.grid(True)
-        
-        st.pyplot(fig_clt)
-        
-        # Stats Panel
-        st.subheader("Statistical Properties")
+        st.divider()
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("Theoretical Mean", f"{clt_mu:.4f}")
-            st.metric("Theoretical Variance", f"{clt_sigma**2:.4f}")
+            st.subheader("Scenario A")
+            dist_name_a = st.selectbox("Distribution", ("Normal", "Uniform", "Exponential", "Pareto"), key="dist_name_a", index=["Normal", "Uniform", "Exponential", "Pareto"].index(get_from_params('dist_name_a', "Normal", str)))
+            n_a = st.slider("Sample Size (n)", 1, 5000, get_from_params('n_a', 30, int), key="n_a")
         with col2:
-            st.metric("Empirical Mean", f"{np.mean(sample_means):.4f}")
-            st.metric("Empirical Variance", f"{np.var(sample_means, ddof=1):.4f}")
+            st.subheader("Scenario B")
+            dist_name_b = st.selectbox("Distribution", ("Normal", "Uniform", "Exponential", "Pareto"), key="dist_name_b", index=["Normal", "Uniform", "Exponential", "Pareto"].index(get_from_params('dist_name_b', "Uniform", str)))
+            n_b = st.slider("Sample Size (n)", 1, 5000, get_from_params('n_b', 100, int), key="n_b")
+    else:
+        st.header("🔬 Simulation Controls")
+        dist_name = st.selectbox("Base Distribution", ("Normal", "Uniform", "Exponential", "Pareto"), key="dist_name", index=["Normal", "Uniform", "Exponential", "Pareto"].index(get_from_params('dist_name', "Normal", str)))
+        n = st.slider("Sample Size (n)", 1, 5000, get_from_params('n', 30, int), key="n")
+        M = st.slider("Number of Samples (M)", 100, 20000, get_from_params('M', 1000, int), key="M_single")
+        seed = st.number_input("Random Seed", 0, 10000, get_from_params('seed', 42, int), key="seed_single")
 
-    with tab3:
-        st.header("Simulated Sample Means Data")
-        
-        # Regenerate for this tab to ensure data is always available
-        sample_means_df = generate_sample_means(dist, n, k, st.session_state.seed)
-        df = pd.DataFrame(sample_means_df, columns=["Sample Mean"])
-        
-        st.dataframe(df.head(10))
-        
-        csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="Download All Sample Means (CSV)",
-            data=csv,
-            file_name=f"clt_sample_means_n{n}_k{k}.csv",
-            mime="text/csv",
-        )
+    # --- Distribution Parameters ---
+    st.divider()
+    st.header("Distribution Parameters")
+    if ab_mode:
+        with st.expander("Scenario A Parameters", expanded=True):
+            if dist_name_a == "Normal": dist_a = stats.norm(loc=st.slider("Mean (μ)", -10.0, 10.0, get_from_params('loc_a', 0.0, float), 0.1, key="loc_a"), scale=st.slider("Std Dev (σ)", 0.1, 10.0, get_from_params('scale_a', 1.0, float), 0.1, key="scale_a"))
+            elif dist_name_a == "Uniform": dist_a = stats.uniform(loc=st.slider("Start", -10.0, 10.0, get_from_params('loc_a', 0.0, float), 0.1, key="loc_a"), scale=st.slider("Width", 0.1, 20.0, get_from_params('scale_a', 5.0, float), 0.1, key="scale_a"))
+            elif dist_name_a == "Exponential": dist_a = stats.expon(scale=st.slider("Scale (λ⁻¹)", 0.1, 10.0, get_from_params('scale_a', 1.0, float), 0.1, key="scale_a"))
+            elif dist_name_a == "Pareto": dist_a = stats.pareto(b=st.slider("Shape (b)", 0.1, 5.0, get_from_params('b_a', 2.0, float), 0.1, key="b_a"))
+        with st.expander("Scenario B Parameters"):
+            if dist_name_b == "Normal": dist_b = stats.norm(loc=st.slider("Mean (μ)", -10.0, 10.0, get_from_params('loc_b', 0.0, float), 0.1, key="loc_b"), scale=st.slider("Std Dev (σ)", 0.1, 10.0, get_from_params('scale_b', 2.0, float), 0.1, key="scale_b"))
+            elif dist_name_b == "Uniform": dist_b = stats.uniform(loc=st.slider("Start", -10.0, 10.0, get_from_params('loc_b', 2.0, float), 0.1, key="loc_b"), scale=st.slider("Width", 0.1, 20.0, get_from_params('scale_b', 5.0, float), 0.1, key="scale_b"))
+            elif dist_name_b == "Exponential": dist_b = stats.expon(scale=st.slider("Scale (λ⁻¹)", 0.1, 10.0, get_from_params('scale_b', 2.0, float), 0.1, key="scale_b"))
+            elif dist_name_b == "Pareto": dist_b = stats.pareto(b=st.slider("Shape (b)", 0.1, 5.0, get_from_params('b_b', 1.0, float), 0.1, key="b_b"))
+    else:
+        if dist_name == "Normal": dist = stats.norm(loc=st.slider("Mean (μ)", -10.0, 10.0, get_from_params('loc', 0.0, float), 0.1, key="loc"), scale=st.slider("Std Dev (σ)", 0.1, 10.0, get_from_params('scale', 1.0, float), 0.1, key="scale"))
+        elif dist_name == "Uniform": dist = stats.uniform(loc=st.slider("Start", -10.0, 10.0, get_from_params('loc', 0.0, float), 0.1, key="loc"), scale=st.slider("Width", 0.1, 20.0, get_from_params('scale', 5.0, float), 0.1, key="scale"))
+        elif dist_name == "Exponential": dist = stats.expon(scale=st.slider("Scale (λ⁻¹)", 0.1, 10.0, get_from_params('scale', 1.0, float), 0.1, key="scale"))
+        elif dist_name == "Pareto": dist = stats.pareto(b=st.slider("Shape (b)", 0.1, 5.0, get_from_params('b', 2.0, float), 0.1, key="b"))
 
-if __name__ == "__main__":
-    main()
+    # --- UX Controls ---
+    st.divider()
+    quick_preview = st.toggle("🚀 Quick Preview", value=True, help="Cap simulations at M=200 for faster interaction.")
+    if quick_preview: M = min(M, 200) if ab_mode else min(st.session_state.M_single, 200)
+
+    # --- Glossary and Export ---
+    with st.expander("📚 Glossary & Sharing"):
+        st.markdown("Key terms and sharing options.")
+        if st.button("Copy Link to Clipboard", use_container_width=True):
+            st.query_params.from_dict(st.session_state)
+            st.success("Link updated in browser URL. Copy it to share.")
+
+# --- Core Simulation & Helper Functions ---
+@st.cache_data(ttl=600)
+def run_simulation(dist, n, M, seed):
+    np.random.seed(seed)
+    samples = dist.rvs(size=(M, n))
+    return pd.DataFrame({'Sample Mean': np.mean(samples, axis=1)})
+
+def get_stats(data):
+    mean, var, skew = np.mean(data), np.var(data), stats.skew(data)
+    shapiro_p = stats.shapiro(data)[1]
+    return {"Mean": mean, "Variance": var, "Skewness": skew, "p-value": shapiro_p}
+
+def plot_hist(ax, data, dist, n, title):
+    ax.hist(data, bins=50, density=True, alpha=0.7, color="#0072B2", label="Sample Means")
+    clt_mu, clt_sigma = dist.mean(), dist.std() / np.sqrt(n)
+    x = np.linspace(data.min(), data.max(), 200)
+    ax.plot(x, stats.norm.pdf(x, clt_mu, clt_sigma), 'r--', lw=2.5, label="Theoretical PDF")
+    ax.set_title(title, fontsize=14); ax.set_xlabel("Sample Mean"); ax.legend()
+
+def plot_qq(ax, data, title):
+    stats.probplot(data, dist="norm", plot=ax)
+    ax.get_lines()[0].set_markerfacecolor('#0072B2'); ax.get_lines()[1].set_color('r')
+    ax.set_title(title, fontsize=14); ax.set_xlabel("Theoretical Quantiles")
+
+# --- Main App Logic ---
+if ab_mode:
+    # A/B Mode
+    st.header("A/B Comparison")
+    with st.spinner(f"Running Simulations A ({dist_name_a}, n={n_a}) and B ({dist_name_b}, n={n_b})..."):
+        means_a = run_simulation(dist_a, n_a, M, seed)['Sample Mean']
+        means_b = run_simulation(dist_b, n_b, M, seed)['Sample Mean']
+    stats_a, stats_b = get_stats(means_a), get_stats(means_b)
+
+    # KPIs
+    st.markdown("##### Comparative Metrics (B vs. A)")
+    kpi_cols = st.columns(3)
+    kpi_cols[0].metric("Δ Mean", f"{stats_b['Mean']:.3f}", f"{stats_b['Mean'] - stats_a['Mean']:.3f}")
+    kpi_cols[1].metric("Δ Variance", f"{stats_b['Variance']:.3f}", f"{stats_b['Variance'] - stats_a['Variance']:.3f}", delta_color="inverse")
+    kpi_cols[2].metric("Δ Skewness", f"{stats_b['Skewness']:.3f}", f"{stats_b['Skewness'] - stats_a['Skewness']:.3f}")
+
+    # Charts
+    hist_cols = st.columns(2)
+    fig_a, ax_a = plt.subplots(); plot_hist(ax_a, means_a, dist_a, n_a, f"Scenario A: {dist_name_a} (n={n_a})"); hist_cols[0].pyplot(fig_a)
+    fig_b, ax_b = plt.subplots(); plot_hist(ax_b, means_b, dist_b, n_b, f"Scenario B: {dist_name_b} (n={n_b})"); hist_cols[1].pyplot(fig_b)
+
+    if st.checkbox("Show side-by-side Q-Q Plots", key='show_qq_ab'):
+        qq_cols = st.columns(2)
+        fig_qa, ax_qa = plt.subplots(); plot_qq(ax_qa, means_a, "Q-Q Plot (A)"); qq_cols[0].pyplot(fig_qa)
+        fig_qb, ax_qb = plt.subplots(); plot_qq(ax_qb, means_b, "Q-Q Plot (B)"); qq_cols[1].pyplot(fig_qb)
+else:
+    # Single Mode
+    with st.spinner(f"Simulating {M} samples of size {n} from a {dist_name} distribution..."):
+        sample_means = run_simulation(dist, n, M, seed)['Sample Mean']
+
+    # Preset Narratives
+    if n < 30: st.info("💡 **Small n:** With a small sample size (n < 30), expect noisier sample means and slower convergence to normality.")
+    if dist_name == "Pareto": st.info("💡 **Heavy-Tailed Distribution (Pareto):** This distribution has outliers that can cause the sample mean to stabilize much slower.")
+
+    # --- View Routing ---
+    if persona == "Executive":
+        st.header("📈 Executive Dashboard")
+        stats_data = get_stats(sample_means)
+        p_value = stats_data["p-value"]
+        st.markdown("##### Key Performance Indicators")
+        kpi_cols = st.columns(4)
+        kpi_cols[0].metric("Sample Mean", f"{stats_data['Mean']:.3f}", help="The average of all sample means.")
+        kpi_cols[1].metric("Variance", f"{stats_data['Variance']:.3f}", help="Spread of sample means. Decreases as 'n' increases.")
+        kpi_cols[2].metric("Skewness", f"{stats_data['Skewness']:.3f}", help="Asymmetry. Near 0 is symmetric.")
+        kpi_cols[3].metric("Normality (p-value)", f"{p_value:.3f}", help="If p ≥ 0.05, we consider it normal.", delta_color="normal" if p_value >= 0.05 else "inverse")
+        
+        st.markdown("> **Takeaway:** The distribution of sample means becomes taller, narrower, and more bell-shaped as sample size `n` increases, visually confirming the Central Limit Theorem.")
+        fig, ax = plt.subplots(figsize=(10, 5)); plot_hist(ax, sample_means, dist, n, f"Distribution of Sample Means (n={n}, M={M})"); st.pyplot(fig)
+
+    elif persona == "Data Scientist":
+        st.header("🔬 Data Scientist Deep Dive")
+        tab1, tab2 = st.tabs(["CLT Diagnostics", "Base Distribution Inspector"])
+        with tab1:
+            st.markdown("> **Takeaway:** The Q-Q plot's linearity and the histogram's bell shape reinforce the normality conclusion from the Shapiro-Wilk test.")
+            col1, col2 = st.columns(2)
+            with col1: fig_hist, ax_hist = plt.subplots(); plot_hist(ax_hist, sample_means, dist, n, "Distribution of Sample Means"); st.pyplot(fig_hist)
+            with col2: fig_qq, ax_qq = plt.subplots(); plot_qq(ax_qq, sample_means, "Q-Q Plot vs. Normal"); st.pyplot(fig_qq)
+        with tab2:
+            st.markdown("> **Takeaway:** This chart shows the underlying distribution we are sampling from. The CLT works even if this distribution is not normal itself.")
+            single_sample = dist.rvs(size=n, random_state=seed)
+            fig, ax = plt.subplots()
+            ax.hist(single_sample, bins=30, density=True, alpha=0.7, color="#009E73", label=f"One Sample (n={n})")
+            if dist_name != "Pareto":
+                x = np.linspace(dist.ppf(0.001), dist.ppf(0.999), 200)
+                ax.plot(x, dist.pdf(x), 'k--', lw=2, label="Theoretical PDF")
+            ax.set_title(f"'{dist_name}' Base Distribution vs. One Sample"); ax.legend(); st.pyplot(fig)
+
+# --- Downloads in Sidebar ---
+with st.sidebar:
+    st.divider()
+    st.markdown("### 📥 Export")
+    if ab_mode:
+        col1, col2 = st.columns(2)
+        col1.download_button("CSV (A)", means_a.to_csv(), f"clt_A.csv", "text/csv")
+        col2.download_button("CSV (B)", means_b.to_csv(), f"clt_B.csv", "text/csv")
+    else:
+        st.download_button("Download Sample Means (CSV)", sample_means.to_csv(), f"clt_data.csv", "text/csv")
+        summary_md = f"# CLT Summary\n- Dist: {dist_name}\n- n: {n}\n- M: {M}\n" + "\n".join([f"- {k}: {v:.3f}" for k,v in get_stats(sample_means).items()])
+        st.download_button("Download Summary (MD)", summary_md, "clt_summary.md", "text/markdown")
