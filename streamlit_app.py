@@ -265,14 +265,15 @@ else:
         
         st.markdown("> **Takeaway:** The distribution of sample means becomes taller, narrower, and more bell-shaped as sample size `n` increases, visually confirming the Central Limit Theorem.")
         fig, ax = plt.subplots(figsize=(10, 5)); plot_hist(ax, sample_means, dist_name, dist_params, n, f"Distribution of Sample Means (n={n}, M={M})"); st.pyplot(fig)
-        st.info("""
+        st.info(f"""
         **What am I looking at?**
-        This chart shows the **distribution of sample means**. Here's what that means:
-        1.  We take a "sample" of `n` data points from the base distribution you selected.
-        2.  We calculate the average (the "mean") of that one sample.
-        3.  We repeat this process `M` times, giving us `M` different sample means.
+        This chart shows the distribution of sample means based on your current settings. Here's how it was generated:
 
-        The histogram above shows the shape of these `M` sample means. The **Central Limit Theorem (CLT)** is the magic here: no matter the shape of the original distribution, the distribution of its sample means will tend to look like a normal (bell-shaped) curve, especially when `n` is large.
+        1.  We took a "sample" of **{n}** data points from the **{dist_name}** distribution.
+        2.  We calculated the average (the "mean") of that single sample.
+        3.  We repeated this process **{M}** times, resulting in {M} different sample means.
+
+        The histogram above shows the shape of these {M} sample means. The **Central Limit Theorem (CLT)** is the magic here: no matter the shape of the original **{dist_name}** distribution, the distribution of its sample means will tend to look like a normal (bell-shaped) curve, especially when `n` is large.
         """, icon="ℹ️")
 
     elif persona == "Data Scientist":
