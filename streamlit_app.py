@@ -66,20 +66,20 @@ with st.sidebar:
     st.header("Distribution Parameters")
     if ab_mode:
         with st.expander("Scenario A Parameters", expanded=True):
-            if dist_name_a == "Normal": dist_a = stats.norm(loc=st.slider("Mean (μ)", -10.0, 10.0, get_from_params('loc_a', 0.0, float), 0.1, key="loc_a"), scale=st.slider("Std Dev (σ)", 0.1, 10.0, get_from_params('scale_a', 1.0, float), 0.1, key="scale_a"))
-            elif dist_name_a == "Uniform": dist_a = stats.uniform(loc=st.slider("Start", -10.0, 10.0, get_from_params('loc_a', 0.0, float), 0.1, key="loc_a"), scale=st.slider("Width", 0.1, 20.0, get_from_params('scale_a', 5.0, float), 0.1, key="scale_a"))
-            elif dist_name_a == "Exponential": dist_a = stats.expon(scale=st.slider("Scale (λ⁻¹)", 0.1, 10.0, get_from_params('scale_a', 1.0, float), 0.1, key="scale_a"))
-            elif dist_name_a == "Pareto": dist_a = stats.pareto(b=st.slider("Shape (b)", 0.1, 5.0, get_from_params('b_a', 2.0, float), 0.1, key="b_a"))
+            if dist_name_a == "Normal": dist_params_a = {'loc': st.slider("Mean (μ)", -10.0, 10.0, get_from_params('loc_a', 0.0, float), 0.1, key="loc_a"), 'scale': st.slider("Std Dev (σ)", 0.1, 10.0, get_from_params('scale_a', 1.0, float), 0.1, key="scale_a")}
+            elif dist_name_a == "Uniform": dist_params_a = {'loc': st.slider("Start", -10.0, 10.0, get_from_params('loc_a', 0.0, float), 0.1, key="loc_a"), 'scale': st.slider("Width", 0.1, 20.0, get_from_params('scale_a', 5.0, float), 0.1, key="scale_a")}
+            elif dist_name_a == "Exponential": dist_params_a = {'scale': st.slider("Scale (λ⁻¹)", 0.1, 10.0, get_from_params('scale_a', 1.0, float), 0.1, key="scale_a")}
+            elif dist_name_a == "Pareto": dist_params_a = {'b': st.slider("Shape (b)", 0.1, 5.0, get_from_params('b_a', 2.0, float), 0.1, key="b_a")}
         with st.expander("Scenario B Parameters"):
-            if dist_name_b == "Normal": dist_b = stats.norm(loc=st.slider("Mean (μ)", -10.0, 10.0, get_from_params('loc_b', 0.0, float), 0.1, key="loc_b"), scale=st.slider("Std Dev (σ)", 0.1, 10.0, get_from_params('scale_b', 2.0, float), 0.1, key="scale_b"))
-            elif dist_name_b == "Uniform": dist_b = stats.uniform(loc=st.slider("Start", -10.0, 10.0, get_from_params('loc_b', 2.0, float), 0.1, key="loc_b"), scale=st.slider("Width", 0.1, 20.0, get_from_params('scale_b', 5.0, float), 0.1, key="scale_b"))
-            elif dist_name_b == "Exponential": dist_b = stats.expon(scale=st.slider("Scale (λ⁻¹)", 0.1, 10.0, get_from_params('scale_b', 2.0, float), 0.1, key="scale_b"))
-            elif dist_name_b == "Pareto": dist_b = stats.pareto(b=st.slider("Shape (b)", 0.1, 5.0, get_from_params('b_b', 1.0, float), 0.1, key="b_b"))
+            if dist_name_b == "Normal": dist_params_b = {'loc': st.slider("Mean (μ)", -10.0, 10.0, get_from_params('loc_b', 0.0, float), 0.1, key="loc_b"), 'scale': st.slider("Std Dev (σ)", 0.1, 10.0, get_from_params('scale_b', 2.0, float), 0.1, key="scale_b")}
+            elif dist_name_b == "Uniform": dist_params_b = {'loc': st.slider("Start", -10.0, 10.0, get_from_params('loc_b', 2.0, float), 0.1, key="loc_b"), 'scale': st.slider("Width", 0.1, 20.0, get_from_params('scale_b', 5.0, float), 0.1, key="scale_b")}
+            elif dist_name_b == "Exponential": dist_params_b = {'scale': st.slider("Scale (λ⁻¹)", 0.1, 10.0, get_from_params('scale_b', 2.0, float), 0.1, key="scale_b")}
+            elif dist_name_b == "Pareto": dist_params_b = {'b': st.slider("Shape (b)", 0.1, 5.0, get_from_params('b_b', 1.0, float), 0.1, key="b_b")}
     else:
-        if dist_name == "Normal": dist = stats.norm(loc=st.slider("Mean (μ)", -10.0, 10.0, get_from_params('loc', 0.0, float), 0.1, key="loc"), scale=st.slider("Std Dev (σ)", 0.1, 10.0, get_from_params('scale', 1.0, float), 0.1, key="scale"))
-        elif dist_name == "Uniform": dist = stats.uniform(loc=st.slider("Start", -10.0, 10.0, get_from_params('loc', 0.0, float), 0.1, key="loc"), scale=st.slider("Width", 0.1, 20.0, get_from_params('scale', 5.0, float), 0.1, key="scale"))
-        elif dist_name == "Exponential": dist = stats.expon(scale=st.slider("Scale (λ⁻¹)", 0.1, 10.0, get_from_params('scale', 1.0, float), 0.1, key="scale"))
-        elif dist_name == "Pareto": dist = stats.pareto(b=st.slider("Shape (b)", 0.1, 5.0, get_from_params('b', 2.0, float), 0.1, key="b"))
+        if dist_name == "Normal": dist_params = {'loc': st.slider("Mean (μ)", -10.0, 10.0, get_from_params('loc', 0.0, float), 0.1, key="loc"), 'scale': st.slider("Std Dev (σ)", 0.1, 10.0, get_from_params('scale', 1.0, float), 0.1, key="scale")}
+        elif dist_name == "Uniform": dist_params = {'loc': st.slider("Start", -10.0, 10.0, get_from_params('loc', 0.0, float), 0.1, key="loc"), 'scale': st.slider("Width", 0.1, 20.0, get_from_params('scale', 5.0, float), 0.1, key="scale")}
+        elif dist_name == "Exponential": dist_params = {'scale': st.slider("Scale (λ⁻¹)", 0.1, 10.0, get_from_params('scale', 1.0, float), 0.1, key="scale")}
+        elif dist_name == "Pareto": dist_params = {'b': st.slider("Shape (b)", 0.1, 5.0, get_from_params('b', 2.0, float), 0.1, key="b")}
 
     # --- UX Controls ---
     st.divider()
@@ -94,8 +94,23 @@ with st.sidebar:
             st.success("Link updated in browser URL. Copy it to share.")
 
 # --- Core Simulation & Helper Functions ---
+def get_dist_from_params(dist_name, dist_params):
+    """Helper to reconstruct a scipy.stats distribution from name and params."""
+    if dist_name == "Normal":
+        return stats.norm(**dist_params)
+    elif dist_name == "Uniform":
+        return stats.uniform(**dist_params)
+    elif dist_name == "Exponential":
+        return stats.expon(**dist_params)
+    elif dist_name == "Pareto":
+        return stats.pareto(**dist_params)
+    # This path should ideally not be reached if inputs are validated
+    raise ValueError(f"Unknown distribution: {dist_name}")
+
 @st.cache_data(ttl=600)
-def run_simulation(dist, n, M, seed):
+def run_simulation(dist_name, dist_params, n, M, seed):
+    """Runs the CLT simulation using hashable parameters."""
+    dist = get_dist_from_params(dist_name, dist_params)
     np.random.seed(seed)
     samples = dist.rvs(size=(M, n))
     return pd.DataFrame({'Sample Mean': np.mean(samples, axis=1)})
@@ -105,7 +120,9 @@ def get_stats(data):
     shapiro_p = stats.shapiro(data)[1]
     return {"Mean": mean, "Variance": var, "Skewness": skew, "p-value": shapiro_p}
 
-def plot_hist(ax, data, dist, n, title):
+def plot_hist(ax, data, dist_name, dist_params, n, title):
+    """Plots the histogram and theoretical PDF."""
+    dist = get_dist_from_params(dist_name, dist_params)
     ax.hist(data, bins=50, density=True, alpha=0.7, color="#0072B2", label="Sample Means")
     clt_mu, clt_sigma = dist.mean(), dist.std() / np.sqrt(n)
     x = np.linspace(data.min(), data.max(), 200)
@@ -122,8 +139,8 @@ if ab_mode:
     # A/B Mode
     st.header("A/B Comparison")
     with st.spinner(f"Running Simulations A ({dist_name_a}, n={n_a}) and B ({dist_name_b}, n={n_b})..."):
-        means_a = run_simulation(dist_a, n_a, M, seed)['Sample Mean']
-        means_b = run_simulation(dist_b, n_b, M, seed)['Sample Mean']
+        means_a = run_simulation(dist_name_a, dist_params_a, n_a, M, seed)['Sample Mean']
+        means_b = run_simulation(dist_name_b, dist_params_b, n_b, M, seed)['Sample Mean']
     stats_a, stats_b = get_stats(means_a), get_stats(means_b)
 
     # KPIs
@@ -135,8 +152,8 @@ if ab_mode:
 
     # Charts
     hist_cols = st.columns(2)
-    fig_a, ax_a = plt.subplots(); plot_hist(ax_a, means_a, dist_a, n_a, f"Scenario A: {dist_name_a} (n={n_a})"); hist_cols[0].pyplot(fig_a)
-    fig_b, ax_b = plt.subplots(); plot_hist(ax_b, means_b, dist_b, n_b, f"Scenario B: {dist_name_b} (n={n_b})"); hist_cols[1].pyplot(fig_b)
+    fig_a, ax_a = plt.subplots(); plot_hist(ax_a, means_a, dist_name_a, dist_params_a, n_a, f"Scenario A: {dist_name_a} (n={n_a})"); hist_cols[0].pyplot(fig_a)
+    fig_b, ax_b = plt.subplots(); plot_hist(ax_b, means_b, dist_name_b, dist_params_b, n_b, f"Scenario B: {dist_name_b} (n={n_b})"); hist_cols[1].pyplot(fig_b)
 
     if st.checkbox("Show side-by-side Q-Q Plots", key='show_qq_ab'):
         qq_cols = st.columns(2)
@@ -145,7 +162,7 @@ if ab_mode:
 else:
     # Single Mode
     with st.spinner(f"Simulating {M} samples of size {n} from a {dist_name} distribution..."):
-        sample_means = run_simulation(dist, n, M, seed)['Sample Mean']
+        sample_means = run_simulation(dist_name, dist_params, n, M, seed)['Sample Mean']
 
     # Preset Narratives
     if n < 30: st.info("💡 **Small n:** With a small sample size (n < 30), expect noisier sample means and slower convergence to normality.")
@@ -164,7 +181,7 @@ else:
         kpi_cols[3].metric("Normality (p-value)", f"{p_value:.3f}", help="If p ≥ 0.05, we consider it normal.", delta_color="normal" if p_value >= 0.05 else "inverse")
         
         st.markdown("> **Takeaway:** The distribution of sample means becomes taller, narrower, and more bell-shaped as sample size `n` increases, visually confirming the Central Limit Theorem.")
-        fig, ax = plt.subplots(figsize=(10, 5)); plot_hist(ax, sample_means, dist, n, f"Distribution of Sample Means (n={n}, M={M})"); st.pyplot(fig)
+        fig, ax = plt.subplots(figsize=(10, 5)); plot_hist(ax, sample_means, dist_name, dist_params, n, f"Distribution of Sample Means (n={n}, M={M})"); st.pyplot(fig)
 
     elif persona == "Data Scientist":
         st.header("🔬 Data Scientist Deep Dive")
@@ -172,10 +189,11 @@ else:
         with tab1:
             st.markdown("> **Takeaway:** The Q-Q plot's linearity and the histogram's bell shape reinforce the normality conclusion from the Shapiro-Wilk test.")
             col1, col2 = st.columns(2)
-            with col1: fig_hist, ax_hist = plt.subplots(); plot_hist(ax_hist, sample_means, dist, n, "Distribution of Sample Means"); st.pyplot(fig_hist)
+            with col1: fig_hist, ax_hist = plt.subplots(); plot_hist(ax_hist, sample_means, dist_name, dist_params, n, "Distribution of Sample Means"); st.pyplot(fig_hist)
             with col2: fig_qq, ax_qq = plt.subplots(); plot_qq(ax_qq, sample_means, "Q-Q Plot vs. Normal"); st.pyplot(fig_qq)
         with tab2:
             st.markdown("> **Takeaway:** This chart shows the underlying distribution we are sampling from. The CLT works even if this distribution is not normal itself.")
+            dist = get_dist_from_params(dist_name, dist_params)
             single_sample = dist.rvs(size=n, random_state=seed)
             fig, ax = plt.subplots()
             ax.hist(single_sample, bins=30, density=True, alpha=0.7, color="#009E73", label=f"One Sample (n={n})")
