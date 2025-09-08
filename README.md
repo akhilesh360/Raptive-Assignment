@@ -1,24 +1,44 @@
-# Distribution Lab (Streamlit) — Normal + CLT
+# Distribution Lab — Normal Distribution & Central Limit Theorem (CLT)
 
-An interactive Streamlit app that demonstrates how parameters change a Normal
-distribution and visualizes the Central Limit Theorem (CLT).
+An interactive **Streamlit app** to explore the **Normal distribution** and visualize the **Central Limit Theorem (CLT)** in action.
 
-## Live Demo
-<https://raptive-assignment-ds7u4sk28vqkqdvrekpzwa.streamlit.app/>
+---
+
+## Demo  
+👉 **[Live App](https://raptive-assignment-ds7u4sk28vqkqdvrekpzwa.streamlit.app/)**  
+
+---
 
 ## Features
-- Adjustable μ and σ with instant PDF/CDF updates
-- Probability shading P(a ≤ X ≤ b)
-- CLT simulation: histogram of sample means vs. N(μ, σ/√n)
-- Stats: mean, variance, skewness, kurtosis
-- Download simulated data as CSV
+- Adjustable **μ (mean)** and **σ (standard deviation)** with instant PDF/CDF updates  
+- Probability shading: `P(a ≤ X ≤ b)`  
+- CLT simulation: histogram of sample means vs. theoretical `N(μ, σ/√n)`  
+- Summary statistics: mean, variance, skewness, kurtosis  
+- Download simulated data as CSV  
 
-## Run Locally
+---
+
+## Dashboard Preview
+
+### Normal Distribution Playground  
+*(Adjust mean & standard deviation interactively)*  
+![Normal Dist Screenshot](screenshots/normal-dist-demo.png)
+
+### Central Limit Theorem Simulation  
+*(Histogram of sample means compared to theoretical normal)*  
+![CLT Screenshot](screenshots/clt-sim-demo.png)
+
+---
+
+## Quick Start
+
 ```bash
-pip install -r requirements.txt
-streamlit run streamlit_app.py
-```
+# Clone repo
+git clone https://github.com/akhilesh360/distribution-lab.git
+cd distribution-lab
 
-## Deploy (Streamlit Community Cloud)
-- New app → connect this repo → path: streamlit_app.py → Python `runtime.txt` set to 3.11.
-- Deploy!
+# Install dependencies
+pip install -r requirements.txt
+
+# Run app locally
+streamlit run streamlit_app.py
