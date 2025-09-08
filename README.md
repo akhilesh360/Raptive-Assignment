@@ -4,7 +4,7 @@ An interactive Streamlit app that demonstrates how parameters change a Normal
 distribution and visualizes the Central Limit Theorem (CLT).
 
 ## Live Demo
-<your Streamlit Cloud URL>
+<https://raptive-assignment-ds7u4sk28vqkqdvrekpzwa.streamlit.app/>
 
 ## Features
 - Adjustable μ and σ with instant PDF/CDF updates
