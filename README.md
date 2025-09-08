@@ -15,17 +15,13 @@ Study the link between user engagement (time on page) and revenue, across platfo
 
 ## Dashboard Preview
 
-### Overall Time vs Revenue  
-![Overall Scatter](outputs/01_scatter_overall.png)
+### 1. Overall Time vs Revenue  
 
-### Platform Analysis  
-![Platform Scatter](outputs/02_scatter_by_platform.png)
+### 2. Platform Analysis  
 
-### Browser Analysis  
-![Browser Scatter](outputs/03_scatter_by_browser.png)
+### 3. Browser Analysis  
 
-### Partial Effects (Controlled Model)  
-![Partial Effects](outputs/04_partial_effects.png)
+### 4. Partial Effects (Controlled Model)  
 
 ## Key Features
 
